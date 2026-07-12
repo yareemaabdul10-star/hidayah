@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { MapPin, RefreshCw, Clock, AlertCircle } from "lucide-react";
+import { MapPin, RefreshCw, Clock, AlertCircle, RotateCcw } from "lucide-react";
 
 // ---------- Constants ----------
 const PRAYERS = ["Fajr", "Sunrise", "Dhuhr", "Asr", "Maghrib", "Isha"];
@@ -21,6 +21,70 @@ const PRAYER_EMOJI = {
   Maghrib: "🌇",
   Isha: "🌃",
 };
+
+// ---------- Azkar Data ----------
+const AZKAR_CATEGORIES = [
+  {
+    id: "morning",
+    title: "Morning Adhkar",
+    arabic: "أذكار الصباح",
+    emoji: "🌅",
+    time: "After Fajr",
+    items: [
+      { arabic: "أَعُوذُ بِاللَّهِ مِنَ الشَّيْطَانِ الرَّجِيمِ\nاللَّهُ لَا إِلَهَ إِلَّا هُوَ الْحَيُّ الْقَيُّومُ", transliteration: "Ayatul Kursi", translation: "Allah — there is no deity except Him, the Ever-Living, the Sustainer of existence...", source: "Quran 2:255", count: 1 },
+      { arabic: "بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ\nقُلْ هُوَ اللَّهُ أَحَدٌ", transliteration: "Surah Al-Ikhlas", translation: "Say: He is Allah, the One. Allah, the Eternal Refuge...", source: "Quran 112", count: 3 },
+      { arabic: "أَصْبَحْنَا وَأَصْبَحَ الْمُلْكُ لِلَّهِ، وَالْحَمْدُ لِلَّهِ", transliteration: "Asbahna wa asbahal mulku lillah walhamdu lillah", translation: "We have reached the morning and at this very time all sovereignty belongs to Allah, and all praise is for Allah.", source: "Abu Dawud 5077", count: 1 },
+      { arabic: "اللَّهُمَّ بِكَ أَصْبَحْنَا، وَبِكَ أَمْسَيْنَا، وَبِكَ نَحْيَا، وَبِكَ نَمُوتُ، وَإِلَيْكَ النُّشُورُ", transliteration: "Allahumma bika asbahna wa bika amsayna wa bika nahya wa bika namutu wa ilaykan nushur", translation: "O Allah, by You we enter the morning and by You we enter the evening, by You we live and by You we die, and to You is the resurrection.", source: "Abu Dawud 5068", count: 1 },
+      { arabic: "سُبْحَانَ اللَّهِ وَبِحَمْدِهِ", transliteration: "SubhanAllahi wa bihamdih", translation: "Glory be to Allah and all praise is due to Him.", source: "Bukhari 6405, Muslim 2692", count: 100 },
+      { arabic: "لَا إِلَهَ إِلَّا اللَّهُ وَحْدَهُ لَا شَرِيكَ لَهُ، لَهُ الْمُلْكُ وَلَهُ الْحَمْدُ وَهُوَ عَلَى كُلِّ شَيْءٍ قَدِيرٌ", transliteration: "La ilaha illallahu wahdahu la sharika lahu, lahul mulku wa lahul hamdu wa huwa ala kulli shay'in qadir", translation: "None has the right to be worshipped except Allah, alone, without partner. To Him belongs all sovereignty and praise, and He is over all things omnipotent.", source: "Bukhari 6403", count: 10 },
+      { arabic: "اللَّهُمَّ عَافِنِي فِي بَدَنِي، اللَّهُمَّ عَافِنِي فِي سَمْعِي، اللَّهُمَّ عَافِنِي فِي بَصَرِي", transliteration: "Allahumma afini fi badani, Allahumma afini fi sam'i, Allahumma afini fi basari", translation: "O Allah, grant me health in my body. O Allah, grant me health in my hearing. O Allah, grant me health in my sight.", source: "Abu Dawud 5090", count: 3 },
+    ],
+  },
+  {
+    id: "evening",
+    title: "Evening Adhkar",
+    arabic: "أذكار المساء",
+    emoji: "🌙",
+    time: "After Asr",
+    items: [
+      { arabic: "أَمْسَيْنَا وَأَمْسَى الْمُلْكُ لِلَّهِ، وَالْحَمْدُ لِلَّهِ", transliteration: "Amsayna wa amsal mulku lillah walhamdu lillah", translation: "We have reached the evening and at this very time all sovereignty belongs to Allah, and all praise is for Allah.", source: "Abu Dawud 5077", count: 1 },
+      { arabic: "اللَّهُمَّ بِكَ أَمْسَيْنَا، وَبِكَ أَصْبَحْنَا، وَبِكَ نَحْيَا، وَبِكَ نَمُوتُ، وَإِلَيْكَ الْمَصِيرُ", transliteration: "Allahumma bika amsayna wa bika asbahna wa bika nahya wa bika namutu wa ilaykal masir", translation: "O Allah, by You we enter the evening and by You we enter the morning, by You we live and by You we die, and to You is the return.", source: "Abu Dawud 5068", count: 1 },
+      { arabic: "سُبْحَانَ اللَّهِ وَبِحَمْدِهِ", transliteration: "SubhanAllahi wa bihamdih", translation: "Glory be to Allah and all praise is due to Him.", source: "Bukhari 6405, Muslim 2692", count: 100 },
+      { arabic: "أَعُوذُ بِكَلِمَاتِ اللَّهِ التَّامَّاتِ مِنْ شَرِّ مَا خَلَقَ", transliteration: "A'udhu bikalimatillahit tammati min sharri ma khalaq", translation: "I seek refuge in the perfect words of Allah from the evil of what He has created.", source: "Muslim 2709", count: 3 },
+      { arabic: "بِسْمِ اللَّهِ الَّذِي لَا يَضُرُّ مَعَ اسْمِهِ شَيْءٌ فِي الْأَرْضِ وَلَا فِي السَّمَاءِ وَهُوَ السَّمِيعُ الْعَلِيمُ", transliteration: "Bismillahil-ladhi la yadurru ma'asmihi shay'un fil-ardi wa la fis-sama'i, wa huwas-sami'ul-'alim", translation: "In the name of Allah with whose name nothing can harm in the earth or in the heaven, and He is the All-Hearing, the All-Knowing.", source: "Abu Dawud 5088, Tirmidhi 3388", count: 3 },
+    ],
+  },
+  {
+    id: "after_prayer",
+    title: "After Prayer",
+    arabic: "أذكار بعد الصلاة",
+    emoji: "🤲",
+    time: "After each Salah",
+    items: [
+      { arabic: "أَسْتَغْفِرُ اللَّهَ", transliteration: "Astaghfirullah", translation: "I seek forgiveness from Allah.", source: "Muslim 591", count: 3 },
+      { arabic: "اللَّهُمَّ أَنْتَ السَّلَامُ وَمِنْكَ السَّلَامُ، تَبَارَكْتَ يَا ذَا الْجَلَالِ وَالْإِكْرَامِ", transliteration: "Allahumma antas-salam wa minkas-salam, tabarakta ya dhal-jalali wal-ikram", translation: "O Allah, You are As-Salam (Peace) and from You is all peace, blessed are You, O Possessor of majesty and honor.", source: "Muslim 591", count: 1 },
+      { arabic: "سُبْحَانَ اللَّهِ", transliteration: "SubhanAllah", translation: "Glory be to Allah.", source: "Muslim 597", count: 33 },
+      { arabic: "الْحَمْدُ لِلَّهِ", transliteration: "Alhamdulillah", translation: "All praise is due to Allah.", source: "Muslim 597", count: 33 },
+      { arabic: "اللَّهُ أَكْبَرُ", transliteration: "Allahu Akbar", translation: "Allah is the Greatest.", source: "Muslim 597", count: 33 },
+      { arabic: "لَا إِلَهَ إِلَّا اللَّهُ وَحْدَهُ لَا شَرِيكَ لَهُ، لَهُ الْمُلْكُ وَلَهُ الْحَمْدُ وَهُوَ عَلَى كُلِّ شَيْءٍ قَدِيرٌ", transliteration: "La ilaha illallahu wahdahu la sharika lah, lahul mulku wa lahul hamdu wa huwa ala kulli shay'in qadir", translation: "None has the right to be worshipped except Allah, alone, without partner. To Him belongs all sovereignty and praise and He is over all things omnipotent.", source: "Muslim 597", count: 1 },
+      { arabic: "آيَةُ الْكُرْسِيِّ", transliteration: "Ayatul Kursi", translation: "Recite Ayatul Kursi (Quran 2:255)", source: "Nasa'i, Ibn Hibban", count: 1 },
+    ],
+  },
+  {
+    id: "sleep",
+    title: "Before Sleep",
+    arabic: "أذكار النوم",
+    emoji: "😴",
+    time: "Before sleeping",
+    items: [
+      { arabic: "بِاسْمِكَ اللَّهُمَّ أَمُوتُ وَأَحْيَا", transliteration: "Bismika Allahumma amutu wa ahya", translation: "In Your name, O Allah, I die and I live.", source: "Bukhari 6324", count: 1 },
+      { arabic: "سُبْحَانَ اللَّهِ", transliteration: "SubhanAllah", translation: "Glory be to Allah.", source: "Bukhari 3113", count: 33 },
+      { arabic: "الْحَمْدُ لِلَّهِ", transliteration: "Alhamdulillah", translation: "All praise is due to Allah.", source: "Bukhari 3113", count: 33 },
+      { arabic: "اللَّهُ أَكْبَرُ", transliteration: "Allahu Akbar", translation: "Allah is the Greatest.", source: "Bukhari 3113", count: 34 },
+      { arabic: "اللَّهُمَّ قِنِي عَذَابَكَ يَوْمَ تَبْعَثُ عِبَادَكَ", transliteration: "Allahumma qini adhabaka yawma tab'athu ibadak", translation: "O Allah, protect me from Your punishment on the Day You resurrect Your servants.", source: "Abu Dawud 5045", count: 3 },
+    ],
+  },
+];
 
 // ---------- Helpers ----------
 function parseTime(timeStr) {
@@ -89,6 +153,9 @@ export default function App() {
   const [countdown, setCountdown] = useState("");
   const [nextPrayer, setNextPrayer] = useState(null);
   const [now, setNow] = useState(new Date());
+  const [activeTab, setActiveTab] = useState("prayer"); // "prayer" | "azkar"
+  const [selectedCategory, setSelectedCategory] = useState(null); // null = category list, object = active category
+  const [counts, setCounts] = useState({}); // { itemIndex: currentCount }
 
   // Tick every second
   useEffect(() => {
@@ -183,8 +250,6 @@ export default function App() {
   return (
     <div style={styles.page}>
       <GlobalStyles />
-
-      {/* Geometric background pattern */}
       <div style={styles.bgPattern} aria-hidden="true" />
 
       {/* Header */}
@@ -198,107 +263,179 @@ export default function App() {
         </button>
       </header>
 
-      {/* Location */}
-      <div style={styles.locationRow}>
-        <MapPin size={14} color="#C9A84C" />
-        <span style={styles.locationText}>{locationName || "Detecting location…"}</span>
+      {/* Tab Navigation */}
+      <div style={styles.tabRow}>
+        <button
+          style={{ ...styles.tabBtn, ...(activeTab === "prayer" ? styles.tabBtnActive : {}) }}
+          onClick={() => setActiveTab("prayer")}
+        >
+          🕌 Prayer Times
+        </button>
+        <button
+          style={{ ...styles.tabBtn, ...(activeTab === "azkar" ? styles.tabBtnActive : {}) }}
+          onClick={() => { setActiveTab("azkar"); setSelectedCategory(null); setCounts({}); }}
+        >
+          📿 Azkar
+        </button>
       </div>
 
-      {/* Greeting */}
-      {timings && (
-        <div style={styles.greeting}>{getGreeting(timings)}</div>
-      )}
+      {/* ===== PRAYER TIMES TAB ===== */}
+      {activeTab === "prayer" && (
+        <>
+          {/* Location */}
+          <div style={styles.locationRow}>
+            <MapPin size={14} color="#C9A84C" />
+            <span style={styles.locationText}>{locationName || "Detecting location…"}</span>
+          </div>
 
-      {/* Date cards */}
-      {hijri && gregorian && (
-        <div style={styles.dateRow}>
-          <div style={styles.dateCard}>
-            <div style={styles.dateCardLabel}>Hijri</div>
-            <div style={styles.dateCardValue}>
-              {hijri.day} {hijri.month.en} {hijri.year}
+          {timings && <div style={styles.greeting}>{getGreeting(timings)}</div>}
+
+          {hijri && gregorian && (
+            <div style={styles.dateRow}>
+              <div style={styles.dateCard}>
+                <div style={styles.dateCardLabel}>Hijri</div>
+                <div style={styles.dateCardValue}>{hijri.day} {hijri.month.en} {hijri.year}</div>
+                <div style={styles.dateCardArabic}>{hijri.month.ar}</div>
+              </div>
+              <div style={styles.dateCard}>
+                <div style={styles.dateCardLabel}>Gregorian</div>
+                <div style={styles.dateCardValue}>{gregorian.day} {gregorian.month.en} {gregorian.year}</div>
+                <div style={styles.dateCardArabic}>{gregorian.weekday.en}</div>
+              </div>
             </div>
-            <div style={styles.dateCardArabic}>{hijri.month.ar}</div>
-          </div>
-          <div style={styles.dateCard}>
-            <div style={styles.dateCardLabel}>Gregorian</div>
-            <div style={styles.dateCardValue}>
-              {gregorian.day} {gregorian.month.en} {gregorian.year}
+          )}
+
+          {error && (
+            <div style={styles.errorCard}>
+              <AlertCircle size={18} color="#E8601C" />
+              <span>{error}</span>
             </div>
-            <div style={styles.dateCardArabic}>{gregorian.weekday.en}</div>
-          </div>
-        </div>
-      )}
+          )}
 
-      {/* Error state */}
-      {error && (
-        <div style={styles.errorCard}>
-          <AlertCircle size={18} color="#E8601C" />
-          <span>{error}</span>
-        </div>
-      )}
+          {loading && !error && (
+            <div style={styles.loadingWrap}>
+              <div style={styles.loadingText}>Fetching prayer times…</div>
+            </div>
+          )}
 
-      {/* Loading */}
-      {loading && !error && (
-        <div style={styles.loadingWrap}>
-          <div style={styles.loadingText}>Fetching prayer times…</div>
-        </div>
-      )}
+          {!loading && !error && nextPrayer && (
+            <div style={styles.countdownCard}>
+              <div style={styles.countdownLabel}>Next Prayer</div>
+              <div style={styles.countdownPrayer}>
+                {PRAYER_EMOJI[nextPrayer.name]} {nextPrayer.name}
+                <span style={styles.countdownArabic}> {PRAYER_ARABIC[nextPrayer.name]}</span>
+              </div>
+              <div style={styles.countdownTimer}>{countdown}</div>
+              <div style={styles.countdownSub}>
+                <Clock size={12} color="#C9A84C" /> {formatTime(timings[nextPrayer.name])}
+              </div>
+            </div>
+          )}
 
-      {/* Next prayer countdown */}
-      {!loading && !error && nextPrayer && (
-        <div style={styles.countdownCard}>
-          <div style={styles.countdownLabel}>Next Prayer</div>
-          <div style={styles.countdownPrayer}>
-            {PRAYER_EMOJI[nextPrayer.name]} {nextPrayer.name}
-            <span style={styles.countdownArabic}> {PRAYER_ARABIC[nextPrayer.name]}</span>
-          </div>
-          <div style={styles.countdownTimer}>{countdown}</div>
-          <div style={styles.countdownSub}>
-            <Clock size={12} color="#C9A84C" /> {formatTime(timings[nextPrayer.name])}
-          </div>
-        </div>
-      )}
-
-      {/* Prayer times list */}
-      {!loading && !error && timings && (
-        <div style={styles.prayerList}>
-          {PRAYERS.map((prayer) => {
-            const isNext = nextPrayer?.name === prayer;
-            const isPassed = parseTime(timings[prayer]) < now && !isNext;
-            return (
-              <div
-                key={prayer}
-                style={{
-                  ...styles.prayerRow,
-                  ...(isNext ? styles.prayerRowNext : {}),
-                  ...(isPassed ? styles.prayerRowPassed : {}),
-                }}
-              >
-                <div style={styles.prayerLeft}>
-                  <span style={styles.prayerEmoji}>{PRAYER_EMOJI[prayer]}</span>
-                  <div>
-                    <div style={styles.prayerName}>{prayer}</div>
-                    <div style={styles.prayerArabic}>{PRAYER_ARABIC[prayer]}</div>
+          {!loading && !error && timings && (
+            <div style={styles.prayerList}>
+              {PRAYERS.map((prayer) => {
+                const isNext = nextPrayer?.name === prayer;
+                const isPassed = parseTime(timings[prayer]) < now && !isNext;
+                return (
+                  <div key={prayer} style={{ ...styles.prayerRow, ...(isNext ? styles.prayerRowNext : {}), ...(isPassed ? styles.prayerRowPassed : {}) }}>
+                    <div style={styles.prayerLeft}>
+                      <span style={styles.prayerEmoji}>{PRAYER_EMOJI[prayer]}</span>
+                      <div>
+                        <div style={styles.prayerName}>{prayer}</div>
+                        <div style={styles.prayerArabic}>{PRAYER_ARABIC[prayer]}</div>
+                      </div>
+                    </div>
+                    <div style={styles.prayerRight}>
+                      <div style={{ ...styles.prayerTime, ...(isNext ? styles.prayerTimeNext : {}) }}>{formatTime(timings[prayer])}</div>
+                      {isNext && <div style={styles.nextBadge}>Next</div>}
+                      {isPassed && <div style={styles.passedBadge}>✓</div>}
+                    </div>
                   </div>
-                </div>
-                <div style={styles.prayerRight}>
-                  <div style={{ ...styles.prayerTime, ...(isNext ? styles.prayerTimeNext : {}) }}>
-                    {formatTime(timings[prayer])}
-                  </div>
-                  {isNext && <div style={styles.nextBadge}>Next</div>}
-                  {isPassed && <div style={styles.passedBadge}>✓</div>}
+                );
+              })}
+            </div>
+          )}
+
+          <div style={styles.footer}>
+            <div style={styles.footerText}>بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ</div>
+            <div style={styles.footerSub}>In the name of Allah, the Most Gracious, the Most Merciful</div>
+          </div>
+        </>
+      )}
+
+      {/* ===== AZKAR TAB ===== */}
+      {activeTab === "azkar" && (
+        <div style={{ padding: "16px 20px 60px" }}>
+          {!selectedCategory ? (
+            <>
+              <div style={styles.azkarHeader}>Choose your Adhkar</div>
+              <div style={styles.azkarGrid}>
+                {AZKAR_CATEGORIES.map((cat) => (
+                  <button
+                    key={cat.id}
+                    style={styles.azkarCategoryCard}
+                    onClick={() => { setSelectedCategory(cat); setCounts({}); }}
+                  >
+                    <div style={styles.azkarCatEmoji}>{cat.emoji}</div>
+                    <div style={styles.azkarCatTitle}>{cat.title}</div>
+                    <div style={styles.azkarCatArabic}>{cat.arabic}</div>
+                    <div style={styles.azkarCatTime}>{cat.time}</div>
+                    <div style={styles.azkarCatCount}>{cat.items.length} adhkar</div>
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : (
+            <>
+              <button style={styles.backBtn} onClick={() => { setSelectedCategory(null); setCounts({}); }}>
+                ← Back to Azkar
+              </button>
+              <div style={styles.azkarCatHeaderRow}>
+                <div style={styles.azkarCatEmoji}>{selectedCategory.emoji}</div>
+                <div>
+                  <div style={styles.azkarCatTitle}>{selectedCategory.title}</div>
+                  <div style={styles.azkarCatArabic}>{selectedCategory.arabic}</div>
                 </div>
               </div>
-            );
-          })}
+              <div style={{ display: "flex", flexDirection: "column", gap: 16, marginTop: 16 }}>
+                {selectedCategory.items.map((item, idx) => {
+                  const current = counts[idx] ?? 0;
+                  const done = current >= item.count;
+                  return (
+                    <div key={idx} style={{ ...styles.azkarCard, ...(done ? styles.azkarCardDone : {}) }}>
+                      <div style={styles.azkarArabic}>{item.arabic}</div>
+                      <div style={styles.azkarTranslit}>{item.transliteration}</div>
+                      <div style={styles.azkarTranslation}>{item.translation}</div>
+                      <div style={styles.azkarSource}>📖 {item.source}</div>
+                      <div style={styles.azkarCountRow}>
+                        <div style={styles.azkarProgress}>
+                          {done ? "✅ Complete" : `${current} / ${item.count}`}
+                        </div>
+                        {!done ? (
+                          <button
+                            style={styles.azkarTapBtn}
+                            onClick={() => setCounts((prev) => ({ ...prev, [idx]: (prev[idx] ?? 0) + 1 }))}
+                          >
+                            Tap to count
+                          </button>
+                        ) : (
+                          <button
+                            style={styles.azkarResetBtn}
+                            onClick={() => setCounts((prev) => ({ ...prev, [idx]: 0 }))}
+                          >
+                            <RotateCcw size={14} /> Reset
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
         </div>
       )}
-
-      {/* Footer */}
-      <div style={styles.footer}>
-        <div style={styles.footerText}>بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ</div>
-        <div style={styles.footerSub}>In the name of Allah, the Most Gracious, the Most Merciful</div>
-      </div>
     </div>
   );
 }

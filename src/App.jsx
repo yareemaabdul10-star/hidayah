@@ -1,28 +1,20 @@
 import { useState, useEffect, useCallback } from "react";
-import { MapPin, RefreshCw, Clock, AlertCircle, RotateCcw } from "lucide-react";
+import { MapPin, Clock, AlertCircle, ChevronLeft, RotateCcw } from "lucide-react";
 
-// ---------- Constants ----------
+// ---------- Prayer Constants ----------
 const PRAYERS = ["Fajr", "Sunrise", "Dhuhr", "Asr", "Maghrib", "Isha"];
 
 const PRAYER_ARABIC = {
-  Fajr: "الفجر",
-  Sunrise: "الشروق",
-  Dhuhr: "الظهر",
-  Asr: "العصر",
-  Maghrib: "المغرب",
-  Isha: "العشاء",
+  Fajr: "الفجر", Sunrise: "الشروق", Dhuhr: "الظهر",
+  Asr: "العصر", Maghrib: "المغرب", Isha: "العشاء",
 };
 
 const PRAYER_EMOJI = {
-  Fajr: "🌙",
-  Sunrise: "🌅",
-  Dhuhr: "☀️",
-  Asr: "🌤",
-  Maghrib: "🌇",
-  Isha: "🌃",
+  Fajr: "🌙", Sunrise: "🌅", Dhuhr: "☀️",
+  Asr: "🌤", Maghrib: "🌇", Isha: "🌃",
 };
 
-// ---------- Azkar Data ----------
+// ---------- Full Azkar Data ----------
 const AZKAR_CATEGORIES = [
   {
     id: "morning",
@@ -31,13 +23,69 @@ const AZKAR_CATEGORIES = [
     emoji: "🌅",
     time: "After Fajr",
     items: [
-      { arabic: "أَعُوذُ بِاللَّهِ مِنَ الشَّيْطَانِ الرَّجِيمِ\nاللَّهُ لَا إِلَهَ إِلَّا هُوَ الْحَيُّ الْقَيُّومُ", transliteration: "Ayatul Kursi", translation: "Allah — there is no deity except Him, the Ever-Living, the Sustainer of existence...", source: "Quran 2:255", count: 1 },
-      { arabic: "بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ\nقُلْ هُوَ اللَّهُ أَحَدٌ", transliteration: "Surah Al-Ikhlas", translation: "Say: He is Allah, the One. Allah, the Eternal Refuge...", source: "Quran 112", count: 3 },
-      { arabic: "أَصْبَحْنَا وَأَصْبَحَ الْمُلْكُ لِلَّهِ، وَالْحَمْدُ لِلَّهِ", transliteration: "Asbahna wa asbahal mulku lillah walhamdu lillah", translation: "We have reached the morning and at this very time all sovereignty belongs to Allah, and all praise is for Allah.", source: "Abu Dawud 5077", count: 1 },
-      { arabic: "اللَّهُمَّ بِكَ أَصْبَحْنَا، وَبِكَ أَمْسَيْنَا، وَبِكَ نَحْيَا، وَبِكَ نَمُوتُ، وَإِلَيْكَ النُّشُورُ", transliteration: "Allahumma bika asbahna wa bika amsayna wa bika nahya wa bika namutu wa ilaykan nushur", translation: "O Allah, by You we enter the morning and by You we enter the evening, by You we live and by You we die, and to You is the resurrection.", source: "Abu Dawud 5068", count: 1 },
-      { arabic: "سُبْحَانَ اللَّهِ وَبِحَمْدِهِ", transliteration: "SubhanAllahi wa bihamdih", translation: "Glory be to Allah and all praise is due to Him.", source: "Bukhari 6405, Muslim 2692", count: 100 },
-      { arabic: "لَا إِلَهَ إِلَّا اللَّهُ وَحْدَهُ لَا شَرِيكَ لَهُ، لَهُ الْمُلْكُ وَلَهُ الْحَمْدُ وَهُوَ عَلَى كُلِّ شَيْءٍ قَدِيرٌ", transliteration: "La ilaha illallahu wahdahu la sharika lahu, lahul mulku wa lahul hamdu wa huwa ala kulli shay'in qadir", translation: "None has the right to be worshipped except Allah, alone, without partner. To Him belongs all sovereignty and praise, and He is over all things omnipotent.", source: "Bukhari 6403", count: 10 },
-      { arabic: "اللَّهُمَّ عَافِنِي فِي بَدَنِي، اللَّهُمَّ عَافِنِي فِي سَمْعِي، اللَّهُمَّ عَافِنِي فِي بَصَرِي", transliteration: "Allahumma afini fi badani, Allahumma afini fi sam'i, Allahumma afini fi basari", translation: "O Allah, grant me health in my body. O Allah, grant me health in my hearing. O Allah, grant me health in my sight.", source: "Abu Dawud 5090", count: 3 },
+      {
+        arabic: "أَعُوذُ بِاللَّهِ مِنَ الشَّيْطَانِ الرَّجِيمِ\n\nاللَّهُ لَا إِلَٰهَ إِلَّا هُوَ الْحَيُّ الْقَيُّومُ ۚ لَا تَأْخُذُهُ سِنَةٌ وَلَا نَوْمٌ ۚ لَّهُ مَا فِي السَّمَاوَاتِ وَمَا فِي الْأَرْضِ ۗ مَن ذَا الَّذِي يَشْفَعُ عِندَهُ إِلَّا بِإِذْنِهِ ۚ يَعْلَمُ مَا بَيْنَ أَيْدِيهِمْ وَمَا خَلْفَهُمْ ۖ وَلَا يُحِيطُونَ بِشَيْءٍ مِّنْ عِلْمِهِ إِلَّا بِمَا شَاءَ ۚ وَسِعَ كُرْسِيُّهُ السَّمَاوَاتِ وَالْأَرْضَ ۖ وَلَا يَئُودُهُ حِفْظُهُمَا ۚ وَهُوَ الْعَلِيُّ الْعَظِيمُ",
+        transliteration: "Ayatul Kursi — Allahu la ilaha illa huwal hayyul qayyum, la ta'khudhuhu sinatun wa la nawm...",
+        translation: "Allah — there is no deity except Him, the Ever-Living, the Sustainer of existence. Neither drowsiness overtakes Him nor sleep. To Him belongs whatever is in the heavens and whatever is on the earth. Who is it that can intercede with Him except by His permission? He knows what is before them and what will be after them, and they encompass not a thing of His knowledge except for what He wills. His Kursi extends over the heavens and the earth, and their preservation tires Him not. And He is the Most High, the Most Great.",
+        source: "Quran 2:255 — Whoever recites this in the morning will be protected until evening (Nasa'i, Silsilah Sahihah 972)",
+        count: 1,
+      },
+      {
+        arabic: "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ\n\nقُلْ هُوَ اللَّهُ أَحَدٌ ﴿١﴾ اللَّهُ الصَّمَدُ ﴿٢﴾ لَمْ يَلِدْ وَلَمْ يُولَدْ ﴿٣﴾ وَلَمْ يَكُن لَّهُ كُفُوًا أَحَدٌ ﴿٤﴾",
+        transliteration: "Qul huwa Allahu ahad. Allahus-samad. Lam yalid wa lam yulad. Wa lam yakun lahu kufuwan ahad.",
+        translation: "Say: He is Allah, the One. Allah, the Eternal Refuge. He neither begets nor is born, nor is there to Him any equivalent.",
+        source: "Surah Al-Ikhlas (Quran 112) — Recite 3 times in morning and evening (Abu Dawud 5082)",
+        count: 3,
+      },
+      {
+        arabic: "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ\n\nقُلْ أَعُوذُ بِرَبِّ الْفَلَقِ ﴿١﴾ مِن شَرِّ مَا خَلَقَ ﴿٢﴾ وَمِن شَرِّ غَاسِقٍ إِذَا وَقَبَ ﴿٣﴾ وَمِن شَرِّ النَّفَّاثَاتِ فِي الْعُقَدِ ﴿٤﴾ وَمِن شَرِّ حَاسِدٍ إِذَا حَسَدَ ﴿٥﴾",
+        transliteration: "Qul a'udhu bi rabbil falaq. Min sharri ma khalaq. Wa min sharri ghasiqin idha waqab. Wa min sharrin naffathati fil 'uqad. Wa min sharri hasidin idha hasad.",
+        translation: "Say: I seek refuge in the Lord of daybreak. From the evil of that which He created. And from the evil of darkness when it settles. And from the evil of the blowers in knots. And from the evil of an envier when he envies.",
+        source: "Surah Al-Falaq (Quran 113) — Recite 3 times in morning and evening (Abu Dawud 5082)",
+        count: 3,
+      },
+      {
+        arabic: "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ\n\nقُلْ أَعُوذُ بِرَبِّ النَّاسِ ﴿١﴾ مَلِكِ النَّاسِ ﴿٢﴾ إِلَٰهِ النَّاسِ ﴿٣﴾ مِن شَرِّ الْوَسْوَاسِ الْخَنَّاسِ ﴿٤﴾ الَّذِي يُوَسْوِسُ فِي صُدُورِ النَّاسِ ﴿٥﴾ مِنَ الْجِنَّةِ وَالنَّاسِ ﴿٦﴾",
+        transliteration: "Qul a'udhu bi rabbin nas. Malikin nas. Ilahin nas. Min sharril waswasil khannas. Alladhi yuwaswisu fi sudurin nas. Minal jinnati wan nas.",
+        translation: "Say: I seek refuge in the Lord of mankind. The King of mankind. The God of mankind. From the evil of the retreating whisperer. Who whispers into the hearts of mankind. From among the jinn and mankind.",
+        source: "Surah An-Nas (Quran 114) — Recite 3 times in morning and evening (Abu Dawud 5082)",
+        count: 3,
+      },
+      {
+        arabic: "أَصْبَحْنَا وَأَصْبَحَ الْمُلْكُ لِلَّهِ، وَالْحَمْدُ لِلَّهِ، لَا إِلَهَ إِلَّا اللَّهُ وَحْدَهُ لَا شَرِيكَ لَهُ، لَهُ الْمُلْكُ وَلَهُ الْحَمْدُ وَهُوَ عَلَى كُلِّ شَيْءٍ قَدِيرٌ",
+        transliteration: "Asbahna wa asbahal mulku lillah, walhamdu lillah, la ilaha illallahu wahdahu la sharika lah, lahul mulku wa lahul hamdu wa huwa 'ala kulli shay'in qadir.",
+        translation: "We have reached the morning and at this very time all sovereignty belongs to Allah. All praise is for Allah. None has the right to be worshipped except Allah, alone, without partner. To Him belongs all sovereignty and praise and He is over all things omnipotent.",
+        source: "Abu Dawud 5077",
+        count: 1,
+      },
+      {
+        arabic: "اللَّهُمَّ بِكَ أَصْبَحْنَا، وَبِكَ أَمْسَيْنَا، وَبِكَ نَحْيَا، وَبِكَ نَمُوتُ، وَإِلَيْكَ النُّشُورُ",
+        transliteration: "Allahumma bika asbahna wa bika amsayna wa bika nahya wa bika namutu wa ilaykan nushur.",
+        translation: "O Allah, by You we enter the morning and by You we enter the evening, by You we live and by You we die, and to You is the resurrection.",
+        source: "Abu Dawud 5068, Tirmidhi 3391",
+        count: 1,
+      },
+      {
+        arabic: "سُبْحَانَ اللَّهِ وَبِحَمْدِهِ",
+        transliteration: "SubhanAllahi wa bihamdih.",
+        translation: "Glory be to Allah and all praise is due to Him.",
+        source: "Bukhari 6405, Muslim 2692 — Whoever says this 100 times in the morning has their sins forgiven even if they were like the foam of the sea.",
+        count: 100,
+      },
+      {
+        arabic: "اللَّهُمَّ عَافِنِي فِي بَدَنِي، اللَّهُمَّ عَافِنِي فِي سَمْعِي، اللَّهُمَّ عَافِنِي فِي بَصَرِي، لَا إِلَهَ إِلَّا أَنْتَ",
+        transliteration: "Allahumma afini fi badani, Allahumma afini fi sam'i, Allahumma afini fi basari, la ilaha illa ant.",
+        translation: "O Allah, grant me health in my body. O Allah, grant me health in my hearing. O Allah, grant me health in my sight. None has the right to be worshipped except You.",
+        source: "Abu Dawud 5090",
+        count: 3,
+      },
+      {
+        arabic: "اللَّهُمَّ إِنِّي أَعُوذُ بِكَ مِنَ الْكُفْرِ وَالْفَقْرِ، وَأَعُوذُ بِكَ مِنْ عَذَابِ الْقَبْرِ، لَا إِلَهَ إِلَّا أَنْتَ",
+        transliteration: "Allahumma inni a'udhu bika minal kufri wal faqr, wa a'udhu bika min 'adhabil qabr, la ilaha illa ant.",
+        translation: "O Allah, I seek refuge in You from disbelief and poverty, and I seek refuge in You from the punishment of the grave. None has the right to be worshipped except You.",
+        source: "Abu Dawud 5090",
+        count: 3,
+      },
     ],
   },
   {
@@ -47,27 +95,289 @@ const AZKAR_CATEGORIES = [
     emoji: "🌙",
     time: "After Asr",
     items: [
-      { arabic: "أَمْسَيْنَا وَأَمْسَى الْمُلْكُ لِلَّهِ، وَالْحَمْدُ لِلَّهِ", transliteration: "Amsayna wa amsal mulku lillah walhamdu lillah", translation: "We have reached the evening and at this very time all sovereignty belongs to Allah, and all praise is for Allah.", source: "Abu Dawud 5077", count: 1 },
-      { arabic: "اللَّهُمَّ بِكَ أَمْسَيْنَا، وَبِكَ أَصْبَحْنَا، وَبِكَ نَحْيَا، وَبِكَ نَمُوتُ، وَإِلَيْكَ الْمَصِيرُ", transliteration: "Allahumma bika amsayna wa bika asbahna wa bika nahya wa bika namutu wa ilaykal masir", translation: "O Allah, by You we enter the evening and by You we enter the morning, by You we live and by You we die, and to You is the return.", source: "Abu Dawud 5068", count: 1 },
-      { arabic: "سُبْحَانَ اللَّهِ وَبِحَمْدِهِ", transliteration: "SubhanAllahi wa bihamdih", translation: "Glory be to Allah and all praise is due to Him.", source: "Bukhari 6405, Muslim 2692", count: 100 },
-      { arabic: "أَعُوذُ بِكَلِمَاتِ اللَّهِ التَّامَّاتِ مِنْ شَرِّ مَا خَلَقَ", transliteration: "A'udhu bikalimatillahit tammati min sharri ma khalaq", translation: "I seek refuge in the perfect words of Allah from the evil of what He has created.", source: "Muslim 2709", count: 3 },
-      { arabic: "بِسْمِ اللَّهِ الَّذِي لَا يَضُرُّ مَعَ اسْمِهِ شَيْءٌ فِي الْأَرْضِ وَلَا فِي السَّمَاءِ وَهُوَ السَّمِيعُ الْعَلِيمُ", transliteration: "Bismillahil-ladhi la yadurru ma'asmihi shay'un fil-ardi wa la fis-sama'i, wa huwas-sami'ul-'alim", translation: "In the name of Allah with whose name nothing can harm in the earth or in the heaven, and He is the All-Hearing, the All-Knowing.", source: "Abu Dawud 5088, Tirmidhi 3388", count: 3 },
+      {
+        arabic: "أَعُوذُ بِاللَّهِ مِنَ الشَّيْطَانِ الرَّجِيمِ\n\nاللَّهُ لَا إِلَٰهَ إِلَّا هُوَ الْحَيُّ الْقَيُّومُ ۚ لَا تَأْخُذُهُ سِنَةٌ وَلَا نَوْمٌ ۚ لَّهُ مَا فِي السَّمَاوَاتِ وَمَا فِي الْأَرْضِ ۗ مَن ذَا الَّذِي يَشْفَعُ عِندَهُ إِلَّا بِإِذْنِهِ ۚ يَعْلَمُ مَا بَيْنَ أَيْدِيهِمْ وَمَا خَلْفَهُمْ ۖ وَلَا يُحِيطُونَ بِشَيْءٍ مِّنْ عِلْمِهِ إِلَّا بِمَا شَاءَ ۚ وَسِعَ كُرْسِيُّهُ السَّمَاوَاتِ وَالْأَرْضَ ۖ وَلَا يَئُودُهُ حِفْظُهُمَا ۚ وَهُوَ الْعَلِيُّ الْعَظِيمُ",
+        transliteration: "Ayatul Kursi",
+        translation: "Allah — there is no deity except Him, the Ever-Living, the Sustainer of existence. Neither drowsiness overtakes Him nor sleep...",
+        source: "Quran 2:255 — Whoever recites this in the evening will be protected until morning (Nasa'i, Silsilah Sahihah 972)",
+        count: 1,
+      },
+      {
+        arabic: "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ\nقُلْ هُوَ اللَّهُ أَحَدٌ ﴿١﴾ اللَّهُ الصَّمَدُ ﴿٢﴾ لَمْ يَلِدْ وَلَمْ يُولَدْ ﴿٣﴾ وَلَمْ يَكُن لَّهُ كُفُوًا أَحَدٌ ﴿٤﴾",
+        transliteration: "Surah Al-Ikhlas",
+        translation: "Say: He is Allah, the One. Allah, the Eternal Refuge. He neither begets nor is born, nor is there to Him any equivalent.",
+        source: "Surah Al-Ikhlas (Quran 112) — Recite 3 times evening (Abu Dawud 5082)",
+        count: 3,
+      },
+      {
+        arabic: "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ\nقُلْ أَعُوذُ بِرَبِّ الْفَلَقِ ﴿١﴾ مِن شَرِّ مَا خَلَقَ ﴿٢﴾ وَمِن شَرِّ غَاسِقٍ إِذَا وَقَبَ ﴿٣﴾ وَمِن شَرِّ النَّفَّاثَاتِ فِي الْعُقَدِ ﴿٤﴾ وَمِن شَرِّ حَاسِدٍ إِذَا حَسَدَ ﴿٥﴾",
+        transliteration: "Surah Al-Falaq",
+        translation: "Say: I seek refuge in the Lord of daybreak from the evil of that which He created...",
+        source: "Surah Al-Falaq (Quran 113) — Recite 3 times evening (Abu Dawud 5082)",
+        count: 3,
+      },
+      {
+        arabic: "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ\nقُلْ أَعُوذُ بِرَبِّ النَّاسِ ﴿١﴾ مَلِكِ النَّاسِ ﴿٢﴾ إِلَٰهِ النَّاسِ ﴿٣﴾ مِن شَرِّ الْوَسْوَاسِ الْخَنَّاسِ ﴿٤﴾ الَّذِي يُوَسْوِسُ فِي صُدُورِ النَّاسِ ﴿٥﴾ مِنَ الْجِنَّةِ وَالنَّاسِ ﴿٦﴾",
+        transliteration: "Surah An-Nas",
+        translation: "Say: I seek refuge in the Lord of mankind, the King of mankind, the God of mankind...",
+        source: "Surah An-Nas (Quran 114) — Recite 3 times evening (Abu Dawud 5082)",
+        count: 3,
+      },
+      {
+        arabic: "أَمْسَيْنَا وَأَمْسَى الْمُلْكُ لِلَّهِ، وَالْحَمْدُ لِلَّهِ، لَا إِلَهَ إِلَّا اللَّهُ وَحْدَهُ لَا شَرِيكَ لَهُ، لَهُ الْمُلْكُ وَلَهُ الْحَمْدُ وَهُوَ عَلَى كُلِّ شَيْءٍ قَدِيرٌ",
+        transliteration: "Amsayna wa amsal mulku lillah, walhamdu lillah, la ilaha illallahu wahdahu la sharika lah, lahul mulku wa lahul hamdu wa huwa 'ala kulli shay'in qadir.",
+        translation: "We have reached the evening and at this very time all sovereignty belongs to Allah. All praise is for Allah. None has the right to be worshipped except Allah, alone, without partner.",
+        source: "Abu Dawud 5077",
+        count: 1,
+      },
+      {
+        arabic: "اللَّهُمَّ بِكَ أَمْسَيْنَا، وَبِكَ أَصْبَحْنَا، وَبِكَ نَحْيَا، وَبِكَ نَمُوتُ، وَإِلَيْكَ الْمَصِيرُ",
+        transliteration: "Allahumma bika amsayna wa bika asbahna wa bika nahya wa bika namutu wa ilaykal masir.",
+        translation: "O Allah, by You we enter the evening and by You we enter the morning, by You we live and by You we die, and to You is the return.",
+        source: "Abu Dawud 5068",
+        count: 1,
+      },
+      {
+        arabic: "أَعُوذُ بِكَلِمَاتِ اللَّهِ التَّامَّاتِ مِنْ شَرِّ مَا خَلَقَ",
+        transliteration: "A'udhu bikalimatillahit tammati min sharri ma khalaq.",
+        translation: "I seek refuge in the perfect words of Allah from the evil of what He has created.",
+        source: "Muslim 2709 — Whoever says this 3 times in the evening, no poison or venom will harm him",
+        count: 3,
+      },
+      {
+        arabic: "بِسْمِ اللَّهِ الَّذِي لَا يَضُرُّ مَعَ اسْمِهِ شَيْءٌ فِي الْأَرْضِ وَلَا فِي السَّمَاءِ وَهُوَ السَّمِيعُ الْعَلِيمُ",
+        transliteration: "Bismillahil-ladhi la yadurru ma'asmihi shay'un fil-ardi wa la fis-sama'i, wa huwas-sami'ul-'alim.",
+        translation: "In the name of Allah with whose name nothing can harm in the earth or in the heaven, and He is the All-Hearing, the All-Knowing.",
+        source: "Abu Dawud 5088, Tirmidhi 3388 — Whoever says this 3 times in the morning and evening, nothing will harm him",
+        count: 3,
+      },
     ],
   },
   {
     id: "after_prayer",
-    title: "After Prayer",
+    title: "After Prayer (Salah)",
     arabic: "أذكار بعد الصلاة",
     emoji: "🤲",
     time: "After each Salah",
     items: [
-      { arabic: "أَسْتَغْفِرُ اللَّهَ", transliteration: "Astaghfirullah", translation: "I seek forgiveness from Allah.", source: "Muslim 591", count: 3 },
-      { arabic: "اللَّهُمَّ أَنْتَ السَّلَامُ وَمِنْكَ السَّلَامُ، تَبَارَكْتَ يَا ذَا الْجَلَالِ وَالْإِكْرَامِ", transliteration: "Allahumma antas-salam wa minkas-salam, tabarakta ya dhal-jalali wal-ikram", translation: "O Allah, You are As-Salam (Peace) and from You is all peace, blessed are You, O Possessor of majesty and honor.", source: "Muslim 591", count: 1 },
-      { arabic: "سُبْحَانَ اللَّهِ", transliteration: "SubhanAllah", translation: "Glory be to Allah.", source: "Muslim 597", count: 33 },
-      { arabic: "الْحَمْدُ لِلَّهِ", transliteration: "Alhamdulillah", translation: "All praise is due to Allah.", source: "Muslim 597", count: 33 },
-      { arabic: "اللَّهُ أَكْبَرُ", transliteration: "Allahu Akbar", translation: "Allah is the Greatest.", source: "Muslim 597", count: 33 },
-      { arabic: "لَا إِلَهَ إِلَّا اللَّهُ وَحْدَهُ لَا شَرِيكَ لَهُ، لَهُ الْمُلْكُ وَلَهُ الْحَمْدُ وَهُوَ عَلَى كُلِّ شَيْءٍ قَدِيرٌ", transliteration: "La ilaha illallahu wahdahu la sharika lah, lahul mulku wa lahul hamdu wa huwa ala kulli shay'in qadir", translation: "None has the right to be worshipped except Allah, alone, without partner. To Him belongs all sovereignty and praise and He is over all things omnipotent.", source: "Muslim 597", count: 1 },
-      { arabic: "آيَةُ الْكُرْسِيِّ", transliteration: "Ayatul Kursi", translation: "Recite Ayatul Kursi (Quran 2:255)", source: "Nasa'i, Ibn Hibban", count: 1 },
+      {
+        arabic: "أَسْتَغْفِرُ اللَّهَ",
+        transliteration: "Astaghfirullah.",
+        translation: "I seek forgiveness from Allah.",
+        source: "Muslim 591 — The Prophet ﷺ would say this 3 times after finishing salah",
+        count: 3,
+      },
+      {
+        arabic: "اللَّهُمَّ أَنْتَ السَّلَامُ وَمِنْكَ السَّلَامُ، تَبَارَكْتَ يَا ذَا الْجَلَالِ وَالْإِكْرَامِ",
+        transliteration: "Allahumma antas-salam wa minkas-salam, tabarakta ya dhal-jalali wal-ikram.",
+        translation: "O Allah, You are As-Salam (Peace) and from You is all peace, blessed are You, O Possessor of majesty and honor.",
+        source: "Muslim 591",
+        count: 1,
+      },
+      {
+        arabic: "سُبْحَانَ اللَّهِ",
+        transliteration: "SubhanAllah.",
+        translation: "Glory be to Allah.",
+        source: "Muslim 597",
+        count: 33,
+      },
+      {
+        arabic: "الْحَمْدُ لِلَّهِ",
+        transliteration: "Alhamdulillah.",
+        translation: "All praise is due to Allah.",
+        source: "Muslim 597",
+        count: 33,
+      },
+      {
+        arabic: "اللَّهُ أَكْبَرُ",
+        transliteration: "Allahu Akbar.",
+        translation: "Allah is the Greatest.",
+        source: "Muslim 597",
+        count: 33,
+      },
+      {
+        arabic: "لَا إِلَهَ إِلَّا اللَّهُ وَحْدَهُ لَا شَرِيكَ لَهُ، لَهُ الْمُلْكُ وَلَهُ الْحَمْدُ وَهُوَ عَلَى كُلِّ شَيْءٍ قَدِيرٌ",
+        transliteration: "La ilaha illallahu wahdahu la sharika lah, lahul mulku wa lahul hamdu wa huwa 'ala kulli shay'in qadir.",
+        translation: "None has the right to be worshipped except Allah, alone, without partner. To Him belongs all sovereignty and praise and He is over all things omnipotent.",
+        source: "Muslim 597 — Said after the 99 tasbih above",
+        count: 1,
+      },
+      {
+        arabic: "اللَّهُ لَا إِلَٰهَ إِلَّا هُوَ الْحَيُّ الْقَيُّومُ ۚ لَا تَأْخُذُهُ سِنَةٌ وَلَا نَوْمٌ...",
+        transliteration: "Ayatul Kursi",
+        translation: "Recite the full Ayatul Kursi (Quran 2:255). Whoever recites it after every obligatory prayer, nothing stands between him and Paradise except death.",
+        source: "Nasa'i, authenticated by Ibn Hibban and Al-Albani",
+        count: 1,
+      },
+    ],
+  },
+  {
+    id: "salah_positions",
+    title: "During Salah",
+    arabic: "أذكار الصلاة",
+    emoji: "🕌",
+    time: "During prayer positions",
+    items: [
+      {
+        arabic: "اللَّهُمَّ بَاعِدْ بَيْنِي وَبَيْنَ خَطَايَايَ كَمَا بَاعَدْتَ بَيْنَ الْمَشْرِقِ وَالْمَغْرِبِ، اللَّهُمَّ نَقِّنِي مِنَ الْخَطَايَا كَمَا يُنَقَّى الثَّوْبُ الْأَبْيَضُ مِنَ الدَّنَسِ، اللَّهُمَّ اغْسِلْ خَطَايَايَ بِالْمَاءِ وَالثَّلْجِ وَالْبَرَدِ",
+        transliteration: "Allahumma ba'id bayni wa bayna khatayaya kama ba'adta baynal mashriqi wal maghrib, Allahumma naqqini minal khataya kama yunaqqath thawbul abyadu minad danas, Allahummaghsil khatayaya bil ma'i wath thalji wal barad.",
+        translation: "O Allah, distance me from my sins as You have distanced the East from the West. O Allah, purify me of my sins as white cloth is purified of dirt. O Allah, wash away my sins with water, snow and hail.",
+        source: "Bukhari 744, Muslim 598 — Dua after opening Takbeer (Istiftah)",
+        count: 1,
+      },
+      {
+        arabic: "سُبْحَانَكَ اللَّهُمَّ وَبِحَمْدِكَ، وَتَبَارَكَ اسْمُكَ، وَتَعَالَى جَدُّكَ، وَلَا إِلَهَ غَيْرُكَ",
+        transliteration: "Subhanakal-lahumma wa bihamdik, wa tabarakasmuk, wa ta'ala jadduk, wa la ilaha ghayruk.",
+        translation: "Glory be to You, O Allah, and all praise. Blessed is Your name and exalted is Your majesty. There is no god but You.",
+        source: "Abu Dawud 775, Tirmidhi 243 — Alternative opening dua (used by many scholars)",
+        count: 1,
+      },
+      {
+        arabic: "سُبْحَانَ رَبِّيَ الْعَظِيمِ",
+        transliteration: "Subhana rabbiyal 'azim.",
+        translation: "Glory be to my Lord, the Most Great.",
+        source: "Abu Dawud 869, Ibn Majah 887 — Said in Ruku (bowing) — minimum 3 times",
+        count: 3,
+      },
+      {
+        arabic: "سَمِعَ اللَّهُ لِمَنْ حَمِدَهُ",
+        transliteration: "Sami'Allahu liman hamidah.",
+        translation: "Allah hears whoever praises Him.",
+        source: "Bukhari 722 — Said when rising from Ruku",
+        count: 1,
+      },
+      {
+        arabic: "رَبَّنَا وَلَكَ الْحَمْدُ",
+        transliteration: "Rabbana wa lakal hamd.",
+        translation: "Our Lord, and to You is all praise.",
+        source: "Bukhari 722 — Said after rising from Ruku",
+        count: 1,
+      },
+      {
+        arabic: "سُبْحَانَ رَبِّيَ الْأَعْلَى",
+        transliteration: "Subhana rabbiyal a'la.",
+        translation: "Glory be to my Lord, the Most High.",
+        source: "Abu Dawud 870, Ibn Majah 888 — Said in Sujud (prostration) — minimum 3 times",
+        count: 3,
+      },
+      {
+        arabic: "اللَّهُمَّ اغْفِرْ لِي وَارْحَمْنِي وَاهْدِنِي وَعَافِنِي وَارْزُقْنِي",
+        transliteration: "Allahummaghfir li warhamni wahdin wa 'afini warzuqni.",
+        translation: "O Allah, forgive me, have mercy on me, guide me, grant me wellbeing, and grant me sustenance.",
+        source: "Abu Dawud 850, Tirmidhi 284 — Said between the two prostrations (Jalsah)",
+        count: 1,
+      },
+      {
+        arabic: "التَّحِيَّاتُ لِلَّهِ وَالصَّلَوَاتُ وَالطَّيِّبَاتُ، السَّلَامُ عَلَيْكَ أَيُّهَا النَّبِيُّ وَرَحْمَةُ اللَّهِ وَبَرَكَاتُهُ، السَّلَامُ عَلَيْنَا وَعَلَى عِبَادِ اللَّهِ الصَّالِحِينَ، أَشْهَدُ أَنْ لَا إِلَهَ إِلَّا اللَّهُ وَأَشْهَدُ أَنَّ مُحَمَّدًا عَبْدُهُ وَرَسُولُهُ",
+        transliteration: "At-tahiyyatu lillahi was-salawatu wat-tayyibat, as-salamu 'alayka ayyuhan-nabiyyu wa rahmatullahi wa barakatuh, as-salamu 'alayna wa 'ala 'ibadillahis-salihin, ashhadu an la ilaha illallah wa ashhadu anna Muhammadan 'abduhu wa rasuluh.",
+        translation: "All greetings, prayers and pure words are due to Allah. Peace be upon you, O Prophet, and the mercy of Allah and His blessings. Peace be upon us and upon the righteous servants of Allah. I bear witness that there is no god but Allah, and I bear witness that Muhammad is His servant and messenger.",
+        source: "Bukhari 831, Muslim 402 — Tashahhud (said in sitting position)",
+        count: 1,
+      },
+      {
+        arabic: "اللَّهُمَّ صَلِّ عَلَى مُحَمَّدٍ وَعَلَى آلِ مُحَمَّدٍ، كَمَا صَلَّيْتَ عَلَى إِبْرَاهِيمَ وَعَلَى آلِ إِبْرَاهِيمَ، إِنَّكَ حَمِيدٌ مَجِيدٌ، اللَّهُمَّ بَارِكْ عَلَى مُحَمَّدٍ وَعَلَى آلِ مُحَمَّدٍ، كَمَا بَارَكْتَ عَلَى إِبْرَاهِيمَ وَعَلَى آلِ إِبْرَاهِيمَ، إِنَّكَ حَمِيدٌ مَجِيدٌ",
+        transliteration: "Allahumma salli 'ala Muhammad wa 'ala ali Muhammad, kama sallayta 'ala Ibrahim wa 'ala ali Ibrahim, innaka Hamidun Majid. Allahumma barik 'ala Muhammad wa 'ala ali Muhammad, kama barakta 'ala Ibrahim wa 'ala ali Ibrahim, innaka Hamidun Majid.",
+        translation: "O Allah, send prayers upon Muhammad and upon the family of Muhammad, as You sent prayers upon Ibrahim and upon the family of Ibrahim. Verily You are full of praise and majesty. O Allah, send blessings upon Muhammad and upon the family of Muhammad, as You sent blessings upon Ibrahim and upon the family of Ibrahim. Verily You are full of praise and majesty.",
+        source: "Bukhari 3370, Muslim 406 — Salawat after Tashahhud (Ibrahimiyyah)",
+        count: 1,
+      },
+      {
+        arabic: "اللَّهُمَّ إِنِّي أَعُوذُ بِكَ مِنْ عَذَابِ جَهَنَّمَ، وَمِنْ عَذَابِ الْقَبْرِ، وَمِنْ فِتْنَةِ الْمَحْيَا وَالْمَمَاتِ، وَمِنْ شَرِّ فِتْنَةِ الْمَسِيحِ الدَّجَّالِ",
+        transliteration: "Allahumma inni a'udhu bika min 'adhabi jahannam, wa min 'adhabill qabr, wa min fitnatil mahya wal mamat, wa min sharri fitnatil masihid dajjal.",
+        translation: "O Allah, I seek refuge in You from the punishment of Hell, from the punishment of the grave, from the trials of life and death, and from the evil of the trial of the False Messiah.",
+        source: "Bukhari 1377, Muslim 588 — Dua said after Tashahhud before Tasleem",
+        count: 1,
+      },
+    ],
+  },
+  {
+    id: "mosque",
+    title: "Entering the Mosque",
+    arabic: "دعاء دخول المسجد",
+    emoji: "🕌",
+    time: "When entering/leaving mosque",
+    items: [
+      {
+        arabic: "أَعُوذُ بِاللَّهِ الْعَظِيمِ، وَبِوَجْهِهِ الْكَرِيمِ، وَسُلْطَانِهِ الْقَدِيمِ، مِنَ الشَّيْطَانِ الرَّجِيمِ",
+        transliteration: "A'udhu billahil 'azim, wa biwajhihil karim, wa sultanihil qadim, minash shaytanir rajim.",
+        translation: "I seek refuge in Allah the Almighty, in His noble Face, and in His eternal dominion, from the accursed devil.",
+        source: "Abu Dawud 466 — Said before entering the mosque (right foot first)",
+        count: 1,
+      },
+      {
+        arabic: "بِسْمِ اللَّهِ، وَالصَّلَاةُ وَالسَّلَامُ عَلَى رَسُولِ اللَّهِ، اللَّهُمَّ افْتَحْ لِي أَبْوَابَ رَحْمَتِكَ",
+        transliteration: "Bismillah, was-salatu was-salamu 'ala rasulillah, Allahumma aftah li abwaba rahmatik.",
+        translation: "In the name of Allah, and peace and blessings be upon the Messenger of Allah. O Allah, open for me the gates of Your mercy.",
+        source: "Muslim 713 — Said when entering the mosque",
+        count: 1,
+      },
+      {
+        arabic: "بِسْمِ اللَّهِ، وَالصَّلَاةُ وَالسَّلَامُ عَلَى رَسُولِ اللَّهِ، اللَّهُمَّ إِنِّي أَسْأَلُكَ مِنْ فَضْلِكَ",
+        transliteration: "Bismillah, was-salatu was-salamu 'ala rasulillah, Allahumma inni as'aluka min fadlik.",
+        translation: "In the name of Allah, and peace and blessings be upon the Messenger of Allah. O Allah, I ask You from Your bounty.",
+        source: "Muslim 713 — Said when leaving the mosque (left foot first)",
+        count: 1,
+      },
+    ],
+  },
+  {
+    id: "toilet",
+    title: "Entering the Toilet",
+    arabic: "دعاء دخول الخلاء",
+    emoji: "🚪",
+    time: "Before/after using the toilet",
+    items: [
+      {
+        arabic: "بِسْمِ اللَّهِ، اللَّهُمَّ إِنِّي أَعُوذُ بِكَ مِنَ الْخُبُثِ وَالْخَبَائِثِ",
+        transliteration: "Bismillah, Allahumma inni a'udhu bika minal khubuthi wal khaba'ith.",
+        translation: "In the name of Allah. O Allah, I seek refuge in You from the male and female evil spirits.",
+        source: "Bukhari 142, Muslim 375 — Said before entering (left foot first)",
+        count: 1,
+      },
+      {
+        arabic: "غُفْرَانَكَ",
+        transliteration: "Ghufranaka.",
+        translation: "I ask You for forgiveness.",
+        source: "Abu Dawud 30, Tirmidhi 7 — Said after leaving the toilet (right foot first)",
+        count: 1,
+      },
+    ],
+  },
+  {
+    id: "wudu",
+    title: "During Wudu",
+    arabic: "أذكار الوضوء",
+    emoji: "💧",
+    time: "During and after ablution",
+    items: [
+      {
+        arabic: "بِسْمِ اللَّهِ",
+        transliteration: "Bismillah.",
+        translation: "In the name of Allah.",
+        source: "Abu Dawud 101, Tirmidhi 25 — Said at the beginning of wudu",
+        count: 1,
+      },
+      {
+        arabic: "أَشْهَدُ أَنْ لَا إِلَهَ إِلَّا اللَّهُ وَحْدَهُ لَا شَرِيكَ لَهُ، وَأَشْهَدُ أَنَّ مُحَمَّدًا عَبْدُهُ وَرَسُولُهُ",
+        transliteration: "Ashhadu an la ilaha illallahu wahdahu la sharika lah, wa ashhadu anna Muhammadan 'abduhu wa rasuluh.",
+        translation: "I bear witness that there is no god but Allah alone, with no partner, and I bear witness that Muhammad is His servant and messenger.",
+        source: "Muslim 234 — Said after completing wudu. The eight gates of Paradise will be opened for him.",
+        count: 1,
+      },
+      {
+        arabic: "اللَّهُمَّ اجْعَلْنِي مِنَ التَّوَّابِينَ وَاجْعَلْنِي مِنَ الْمُتَطَهِّرِينَ",
+        transliteration: "Allahumma j'alni minat-tawwabin waj'alni minal mutatahhirin.",
+        translation: "O Allah, make me among those who repent and make me among those who purify themselves.",
+        source: "Tirmidhi 55 — Said after wudu",
+        count: 1,
+      },
+      {
+        arabic: "سُبْحَانَكَ اللَّهُمَّ وَبِحَمْدِكَ، أَشْهَدُ أَنْ لَا إِلَهَ إِلَّا أَنْتَ، أَسْتَغْفِرُكَ وَأَتُوبُ إِلَيْكَ",
+        transliteration: "Subhanakal-lahumma wa bihamdik, ashhadu an la ilaha illa ant, astaghfiruka wa atubu ilayk.",
+        translation: "Glory be to You, O Allah, and all praise. I bear witness that there is no god but You. I seek Your forgiveness and I turn to You in repentance.",
+        source: "Nasa'i, authenticated by Al-Albani — Said after wudu",
+        count: 1,
+      },
     ],
   },
   {
@@ -77,23 +387,58 @@ const AZKAR_CATEGORIES = [
     emoji: "😴",
     time: "Before sleeping",
     items: [
-      { arabic: "بِاسْمِكَ اللَّهُمَّ أَمُوتُ وَأَحْيَا", transliteration: "Bismika Allahumma amutu wa ahya", translation: "In Your name, O Allah, I die and I live.", source: "Bukhari 6324", count: 1 },
-      { arabic: "سُبْحَانَ اللَّهِ", transliteration: "SubhanAllah", translation: "Glory be to Allah.", source: "Bukhari 3113", count: 33 },
-      { arabic: "الْحَمْدُ لِلَّهِ", transliteration: "Alhamdulillah", translation: "All praise is due to Allah.", source: "Bukhari 3113", count: 33 },
-      { arabic: "اللَّهُ أَكْبَرُ", transliteration: "Allahu Akbar", translation: "Allah is the Greatest.", source: "Bukhari 3113", count: 34 },
-      { arabic: "اللَّهُمَّ قِنِي عَذَابَكَ يَوْمَ تَبْعَثُ عِبَادَكَ", transliteration: "Allahumma qini adhabaka yawma tab'athu ibadak", translation: "O Allah, protect me from Your punishment on the Day You resurrect Your servants.", source: "Abu Dawud 5045", count: 3 },
+      {
+        arabic: "بِاسْمِكَ اللَّهُمَّ أَمُوتُ وَأَحْيَا",
+        transliteration: "Bismika Allahumma amutu wa ahya.",
+        translation: "In Your name, O Allah, I die and I live.",
+        source: "Bukhari 6324",
+        count: 1,
+      },
+      {
+        arabic: "اللَّهُمَّ قِنِي عَذَابَكَ يَوْمَ تَبْعَثُ عِبَادَكَ",
+        transliteration: "Allahumma qini 'adhabaka yawma tab'athu 'ibadak.",
+        translation: "O Allah, protect me from Your punishment on the Day You resurrect Your servants.",
+        source: "Abu Dawud 5045",
+        count: 3,
+      },
+      {
+        arabic: "سُبْحَانَ اللَّهِ",
+        transliteration: "SubhanAllah.",
+        translation: "Glory be to Allah.",
+        source: "Bukhari 3113 — The Prophet ﷺ advised Fatimah and Ali to say this 33 times before sleep",
+        count: 33,
+      },
+      {
+        arabic: "الْحَمْدُ لِلَّهِ",
+        transliteration: "Alhamdulillah.",
+        translation: "All praise is due to Allah.",
+        source: "Bukhari 3113",
+        count: 33,
+      },
+      {
+        arabic: "اللَّهُ أَكْبَرُ",
+        transliteration: "Allahu Akbar.",
+        translation: "Allah is the Greatest.",
+        source: "Bukhari 3113",
+        count: 34,
+      },
+      {
+        arabic: "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ\nقُلْ هُوَ اللَّهُ أَحَدٌ ﴿١﴾ اللَّهُ الصَّمَدُ ﴿٢﴾ لَمْ يَلِدْ وَلَمْ يُولَدْ ﴿٣﴾ وَلَمْ يَكُن لَّهُ كُفُوًا أَحَدٌ ﴿٤﴾",
+        transliteration: "Surah Al-Ikhlas, Al-Falaq, An-Nas",
+        translation: "Recite Surah Al-Ikhlas, Al-Falaq and An-Nas — blow into cupped hands and wipe over the body (3 times).",
+        source: "Bukhari 5017 — The Prophet ﷺ did this every night before sleep",
+        count: 3,
+      },
     ],
   },
 ];
 
 // ---------- Helpers ----------
 function parseTime(timeStr) {
-  // timeStr is like "05:23 (WAT)" or "05:23"
   const clean = timeStr.replace(/\s*\(.*?\)/, "").trim();
   const [h, m] = clean.split(":").map(Number);
   const now = new Date();
-  const d = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m, 0);
-  return d;
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m, 0);
 }
 
 function formatTime(timeStr) {
@@ -110,7 +455,6 @@ function getNextPrayer(timings) {
     const t = parseTime(timings[prayer]);
     if (t > now) return { name: prayer, time: t };
   }
-  // All prayers passed — next is Fajr tomorrow
   const fajr = parseTime(timings["Fajr"]);
   fajr.setDate(fajr.getDate() + 1);
   return { name: "Fajr", time: fajr };
@@ -133,7 +477,6 @@ function getGreeting(timings) {
   const asr = parseTime(timings.Asr);
   const maghrib = parseTime(timings.Maghrib);
   const isha = parseTime(timings.Isha);
-
   if (now >= fajr && now < dhuhr) return "Sabāḥ al-khayr 🌅";
   if (now >= dhuhr && now < asr) return "Muẓhir mubārak ☀️";
   if (now >= asr && now < maghrib) return "ʿAsr mubārak 🌤";
@@ -153,19 +496,15 @@ export default function App() {
   const [countdown, setCountdown] = useState("");
   const [nextPrayer, setNextPrayer] = useState(null);
   const [now, setNow] = useState(new Date());
-  const [activeTab, setActiveTab] = useState("prayer"); // "prayer" | "azkar"
-  const [selectedCategory, setSelectedCategory] = useState(null); // null = category list, object = active category
-  const [counts, setCounts] = useState({}); // { itemIndex: currentCount }
+  const [activeTab, setActiveTab] = useState("prayer");
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [counts, setCounts] = useState({});
 
-  // Tick every second
   useEffect(() => {
-    const interval = setInterval(() => {
-      setNow(new Date());
-    }, 1000);
+    const interval = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(interval);
   }, []);
 
-  // Update countdown
   useEffect(() => {
     if (!timings) return;
     const next = getNextPrayer(timings);
@@ -178,15 +517,10 @@ export default function App() {
     setError("");
     try {
       const today = new Date();
-      const day = today.getDate();
-      const month = today.getMonth() + 1;
-      const year = today.getFullYear();
-
       const res = await fetch(
-        `https://api.aladhan.com/v1/timings/${day}-${month}-${year}?latitude=${lat}&longitude=${lon}&method=3`
+        `https://api.aladhan.com/v1/timings/${today.getDate()}-${today.getMonth() + 1}-${today.getFullYear()}?latitude=${lat}&longitude=${lon}&method=3`
       );
       const data = await res.json();
-
       if (data.code === 200) {
         setTimings(data.data.timings);
         setHijri(data.data.date.hijri);
@@ -194,86 +528,93 @@ export default function App() {
       } else {
         setError("Couldn't fetch prayer times. Please try again.");
       }
-    } catch (e) {
+    } catch {
       setError("Network error. Please check your connection.");
     }
     setLoading(false);
   }, []);
 
-  const fetchLocationName = useCallback(async (lat, lon) => {
-    try {
-      const res = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`
-      );
-      const data = await res.json();
-      const city =
-        data.address?.city ||
-        data.address?.town ||
-        data.address?.village ||
-        data.address?.county ||
-        "Your Location";
-      setLocationName(city);
-    } catch {
-      setLocationName("Your Location");
-    }
-  }, []);
-
-  const getLocation = useCallback(() => {
-    setLoading(true);
-    setError("");
+  useEffect(() => {
     if (!navigator.geolocation) {
-      setError("Geolocation is not supported by your browser.");
+      setError("Location not supported on this device.");
       setLoading(false);
       return;
     }
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
+      async (pos) => {
         const { latitude, longitude } = pos.coords;
         setLocation({ lat: latitude, lon: longitude });
+        try {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`
+          );
+          const data = await res.json();
+          const city = data.address?.city || data.address?.town || data.address?.village || "";
+          const country = data.address?.country || "";
+          setLocationName(city ? `${city}, ${country}` : country);
+        } catch { setLocationName(""); }
         fetchPrayerTimes(latitude, longitude);
-        fetchLocationName(latitude, longitude);
       },
       () => {
-        // Default to Abuja, Nigeria if location denied
-        setLocationName("Abuja, Nigeria");
-        setLocation({ lat: 9.0579, lon: 7.4951 });
-        fetchPrayerTimes(9.0579, 7.4951);
+        setError("Location permission denied. Please allow location access.");
+        setLoading(false);
       }
     );
-  }, [fetchPrayerTimes, fetchLocationName]);
+  }, [fetchPrayerTimes]);
 
-  useEffect(() => {
-    getLocation();
-  }, [getLocation]);
+  function tap(index) {
+    const cat = selectedCategory;
+    const target = cat.items[index].count;
+    const key = `${cat.id}-${index}`;
+    const current = counts[key] || 0;
+    if (current < target) {
+      setCounts((prev) => ({ ...prev, [key]: current + 1 }));
+    }
+  }
 
-  // ---------- Render ----------
+  function resetCount(index) {
+    const key = `${selectedCategory.id}-${index}`;
+    setCounts((prev) => ({ ...prev, [key]: 0 }));
+  }
+
   return (
     <div style={styles.page}>
       <GlobalStyles />
-      <div style={styles.bgPattern} aria-hidden="true" />
 
       {/* Header */}
-      <header style={styles.header}>
-        <div>
-          <h1 style={styles.appName}>هداية</h1>
-          <div style={styles.appNameLatin}>Hidayah</div>
+      <div style={styles.header}>
+        <div style={styles.headerTop}>
+          <div>
+            <div style={styles.appName}>هِدَايَة</div>
+            <div style={styles.appNameEn}>Hidayah</div>
+          </div>
+          <div style={styles.locationPill}>
+            <MapPin size={12} color="#C9A84C" />
+            <span style={styles.locationText}>{locationName || "Detecting..."}</span>
+          </div>
         </div>
-        <button style={styles.refreshBtn} onClick={getLocation} title="Refresh">
-          <RefreshCw size={18} color="#C9A84C" />
-        </button>
-      </header>
 
-      {/* Tab Navigation */}
-      <div style={styles.tabRow}>
+        {/* Dates */}
+        {hijri && gregorian && (
+          <div style={styles.dateRow}>
+            <span style={styles.dateHijri}>{hijri.day} {hijri.month.en} {hijri.year} AH</span>
+            <span style={styles.dateSep}>·</span>
+            <span style={styles.dateGreg}>{gregorian.day} {gregorian.month.en} {gregorian.year}</span>
+          </div>
+        )}
+      </div>
+
+      {/* Tabs */}
+      <div style={styles.tabs}>
         <button
-          style={{ ...styles.tabBtn, ...(activeTab === "prayer" ? styles.tabBtnActive : {}) }}
+          style={{ ...styles.tab, ...(activeTab === "prayer" ? styles.tabActive : {}) }}
           onClick={() => setActiveTab("prayer")}
         >
           🕌 Prayer Times
         </button>
         <button
-          style={{ ...styles.tabBtn, ...(activeTab === "azkar" ? styles.tabBtnActive : {}) }}
-          onClick={() => { setActiveTab("azkar"); setSelectedCategory(null); setCounts({}); }}
+          style={{ ...styles.tab, ...(activeTab === "azkar" ? styles.tabActive : {}) }}
+          onClick={() => { setActiveTab("azkar"); setSelectedCategory(null); }}
         >
           📿 Azkar
         </button>
@@ -281,29 +622,8 @@ export default function App() {
 
       {/* ===== PRAYER TIMES TAB ===== */}
       {activeTab === "prayer" && (
-        <>
-          {/* Location */}
-          <div style={styles.locationRow}>
-            <MapPin size={14} color="#C9A84C" />
-            <span style={styles.locationText}>{locationName || "Detecting location…"}</span>
-          </div>
-
+        <div style={styles.content}>
           {timings && <div style={styles.greeting}>{getGreeting(timings)}</div>}
-
-          {hijri && gregorian && (
-            <div style={styles.dateRow}>
-              <div style={styles.dateCard}>
-                <div style={styles.dateCardLabel}>Hijri</div>
-                <div style={styles.dateCardValue}>{hijri.day} {hijri.month.en} {hijri.year}</div>
-                <div style={styles.dateCardArabic}>{hijri.month.ar}</div>
-              </div>
-              <div style={styles.dateCard}>
-                <div style={styles.dateCardLabel}>Gregorian</div>
-                <div style={styles.dateCardValue}>{gregorian.day} {gregorian.month.en} {gregorian.year}</div>
-                <div style={styles.dateCardArabic}>{gregorian.weekday.en}</div>
-              </div>
-            </div>
-          )}
 
           {error && (
             <div style={styles.errorCard}>
@@ -314,6 +634,7 @@ export default function App() {
 
           {loading && !error && (
             <div style={styles.loadingWrap}>
+              <div style={styles.loadingDot} />
               <div style={styles.loadingText}>Fetching prayer times…</div>
             </div>
           )}
@@ -327,7 +648,7 @@ export default function App() {
               </div>
               <div style={styles.countdownTimer}>{countdown}</div>
               <div style={styles.countdownSub}>
-                <Clock size={12} color="#C9A84C" /> {formatTime(timings[nextPrayer.name])}
+                <Clock size={12} color="#C9A84C" /> {timings && formatTime(timings[nextPrayer.name])}
               </div>
             </div>
           )}
@@ -338,7 +659,14 @@ export default function App() {
                 const isNext = nextPrayer?.name === prayer;
                 const isPassed = parseTime(timings[prayer]) < now && !isNext;
                 return (
-                  <div key={prayer} style={{ ...styles.prayerRow, ...(isNext ? styles.prayerRowNext : {}), ...(isPassed ? styles.prayerRowPassed : {}) }}>
+                  <div
+                    key={prayer}
+                    style={{
+                      ...styles.prayerRow,
+                      ...(isNext ? styles.prayerRowNext : {}),
+                      ...(isPassed ? styles.prayerRowPassed : {}),
+                    }}
+                  >
                     <div style={styles.prayerLeft}>
                       <span style={styles.prayerEmoji}>{PRAYER_EMOJI[prayer]}</span>
                       <div>
@@ -347,7 +675,9 @@ export default function App() {
                       </div>
                     </div>
                     <div style={styles.prayerRight}>
-                      <div style={{ ...styles.prayerTime, ...(isNext ? styles.prayerTimeNext : {}) }}>{formatTime(timings[prayer])}</div>
+                      <div style={{ ...styles.prayerTime, ...(isNext ? styles.prayerTimeNext : {}) }}>
+                        {formatTime(timings[prayer])}
+                      </div>
                       {isNext && <div style={styles.nextBadge}>Next</div>}
                       {isPassed && <div style={styles.passedBadge}>✓</div>}
                     </div>
@@ -359,366 +689,182 @@ export default function App() {
 
           <div style={styles.footer}>
             <div style={styles.footerText}>بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ</div>
-            <div style={styles.footerSub}>In the name of Allah, the Most Gracious, the Most Merciful</div>
+            <div style={styles.footerSub}>Prayer times via Aladhan API · Method: Muslim World League</div>
           </div>
-        </>
+        </div>
       )}
 
       {/* ===== AZKAR TAB ===== */}
-      {activeTab === "azkar" && (
-        <div style={{ padding: "16px 20px 60px" }}>
-          {!selectedCategory ? (
-            <>
-              <div style={styles.azkarHeader}>Choose your Adhkar</div>
-              <div style={styles.azkarGrid}>
-                {AZKAR_CATEGORIES.map((cat) => (
-                  <button
-                    key={cat.id}
-                    style={styles.azkarCategoryCard}
-                    onClick={() => { setSelectedCategory(cat); setCounts({}); }}
-                  >
-                    <div style={styles.azkarCatEmoji}>{cat.emoji}</div>
-                    <div style={styles.azkarCatTitle}>{cat.title}</div>
-                    <div style={styles.azkarCatArabic}>{cat.arabic}</div>
-                    <div style={styles.azkarCatTime}>{cat.time}</div>
-                    <div style={styles.azkarCatCount}>{cat.items.length} adhkar</div>
-                  </button>
-                ))}
-              </div>
-            </>
-          ) : (
-            <>
-              <button style={styles.backBtn} onClick={() => { setSelectedCategory(null); setCounts({}); }}>
-                ← Back to Azkar
+      {activeTab === "azkar" && !selectedCategory && (
+        <div style={styles.content}>
+          <div style={styles.azkarTitle}>Daily Adhkar & Duas</div>
+          <div style={styles.azkarSubtitle}>Tap a category to begin</div>
+          <div style={styles.categoryGrid}>
+            {AZKAR_CATEGORIES.map((cat) => (
+              <button
+                key={cat.id}
+                style={styles.categoryCard}
+                onClick={() => { setSelectedCategory(cat); setCounts({}); }}
+              >
+                <div style={styles.categoryEmoji}>{cat.emoji}</div>
+                <div style={styles.categoryTitle}>{cat.title}</div>
+                <div style={styles.categoryArabic}>{cat.arabic}</div>
+                <div style={styles.categoryMeta}>{cat.items.length} adhkar · {cat.time}</div>
               </button>
-              <div style={styles.azkarCatHeaderRow}>
-                <div style={styles.azkarCatEmoji}>{selectedCategory.emoji}</div>
-                <div>
-                  <div style={styles.azkarCatTitle}>{selectedCategory.title}</div>
-                  <div style={styles.azkarCatArabic}>{selectedCategory.arabic}</div>
-                </div>
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 16, marginTop: 16 }}>
-                {selectedCategory.items.map((item, idx) => {
-                  const current = counts[idx] ?? 0;
-                  const done = current >= item.count;
-                  return (
-                    <div key={idx} style={{ ...styles.azkarCard, ...(done ? styles.azkarCardDone : {}) }}>
-                      <div style={styles.azkarArabic}>{item.arabic}</div>
-                      <div style={styles.azkarTranslit}>{item.transliteration}</div>
-                      <div style={styles.azkarTranslation}>{item.translation}</div>
-                      <div style={styles.azkarSource}>📖 {item.source}</div>
-                      <div style={styles.azkarCountRow}>
-                        <div style={styles.azkarProgress}>
-                          {done ? "✅ Complete" : `${current} / ${item.count}`}
-                        </div>
-                        {!done ? (
-                          <button
-                            style={styles.azkarTapBtn}
-                            onClick={() => setCounts((prev) => ({ ...prev, [idx]: (prev[idx] ?? 0) + 1 }))}
-                          >
-                            Tap to count
-                          </button>
-                        ) : (
-                          <button
-                            style={styles.azkarResetBtn}
-                            onClick={() => setCounts((prev) => ({ ...prev, [idx]: 0 }))}
-                          >
-                            <RotateCcw size={14} /> Reset
-                          </button>
-                        )}
-                      </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {activeTab === "azkar" && selectedCategory && (
+        <div style={styles.content}>
+          <button style={styles.backBtn} onClick={() => setSelectedCategory(null)}>
+            <ChevronLeft size={16} /> Back to categories
+          </button>
+          <div style={styles.catHeader}>
+            <div style={styles.catEmoji}>{selectedCategory.emoji}</div>
+            <div style={styles.catTitle}>{selectedCategory.title}</div>
+            <div style={styles.catArabic}>{selectedCategory.arabic}</div>
+            <div style={styles.catTime}>{selectedCategory.time}</div>
+          </div>
+
+          <div style={styles.dhikrList}>
+            {selectedCategory.items.map((item, idx) => {
+              const key = `${selectedCategory.id}-${idx}`;
+              const current = counts[key] || 0;
+              const done = current >= item.count;
+              return (
+                <div key={idx} style={{ ...styles.dhikrCard, ...(done ? styles.dhikrCardDone : {}) }}>
+                  <div style={styles.dhikrArabic}>{item.arabic}</div>
+                  <div style={styles.dhikrTranslit}>{item.transliteration}</div>
+                  <div style={styles.dhikrTranslation}>{item.translation}</div>
+                  <div style={styles.dhikrSource}>📖 {item.source}</div>
+                  <div style={styles.dhikrFooter}>
+                    <div style={styles.dhikrCount}>
+                      <span style={{ ...styles.dhikrCurrent, ...(done ? styles.dhikrCurrentDone : {}) }}>
+                        {current}
+                      </span>
+                      <span style={styles.dhikrSlash}>/</span>
+                      <span style={styles.dhikrTarget}>{item.count}</span>
                     </div>
-                  );
-                })}
-              </div>
-            </>
-          )}
+                    <div style={styles.dhikrBtns}>
+                      <button style={styles.resetBtn} onClick={() => resetCount(idx)}>
+                        <RotateCcw size={14} />
+                      </button>
+                      <button
+                        style={{ ...styles.tapBtn, ...(done ? styles.tapBtnDone : {}) }}
+                        onClick={() => tap(idx)}
+                        disabled={done}
+                      >
+                        {done ? "✓ Done" : "Tap"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
     </div>
   );
 }
 
-// ---------- Global styles ----------
 function GlobalStyles() {
   return (
     <style>{`
       * { box-sizing: border-box; }
-      body { margin: 0; background: #0A1628; font-family: 'Inter', -apple-system, sans-serif; }
-      button { cursor: pointer; font-family: inherit; }
-      @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+      body { margin: 0; background: #0B1929; }
+      button { font-family: inherit; cursor: pointer; border: none; }
+      @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
     `}</style>
   );
 }
 
 // ---------- Styles ----------
+const MIDNIGHT = "#0B1929";
+const DEEP = "#112240";
+const CARD = "#1A2F4A";
 const GOLD = "#C9A84C";
-const MIDNIGHT = "#0A1628";
-const NAVY = "#0F2040";
-const PARCHMENT = "#F8F4ED";
-const FONT_ARABIC = "'Amiri', serif";
-const FONT_BODY = "'Inter', -apple-system, sans-serif";
+const GOLD_LIGHT = "#E8C875";
+const TEXT = "#E8E0CC";
+const MUTED = "#8B9DBF";
+const GREEN = "#2D7A3A";
+const FONT_ARABIC = "'Amiri', 'Scheherazade New', serif";
+const FONT = "-apple-system, 'Segoe UI', sans-serif";
 
 const styles = {
-  page: {
-    minHeight: "100vh",
-    background: `linear-gradient(160deg, #0A1628 0%, #0F2040 50%, #0A1628 100%)`,
-    color: PARCHMENT,
-    fontFamily: FONT_BODY,
-    maxWidth: 480,
-    margin: "0 auto",
-    paddingBottom: 40,
-    position: "relative",
-    overflowX: "hidden",
-  },
-  bgPattern: {
-    position: "fixed",
-    top: 0, left: 0, right: 0, bottom: 0,
-    backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23C9A84C' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-    pointerEvents: "none",
-    zIndex: 0,
-  },
-  header: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: "32px 24px 8px",
-    position: "relative",
-    zIndex: 1,
-  },
-  appName: {
-    fontFamily: FONT_ARABIC,
-    fontSize: 36,
-    color: GOLD,
-    margin: 0,
-    lineHeight: 1,
-  },
-  appNameLatin: {
-    fontSize: 13,
-    color: "#8B9DBF",
-    letterSpacing: "0.15em",
-    textTransform: "uppercase",
-    marginTop: 2,
-  },
-  refreshBtn: {
-    background: "rgba(201,168,76,0.1)",
-    border: "1px solid rgba(201,168,76,0.2)",
-    borderRadius: 10,
-    padding: 10,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  locationRow: {
-    display: "flex",
-    alignItems: "center",
-    gap: 6,
-    padding: "0 24px 16px",
-    position: "relative",
-    zIndex: 1,
-  },
-  locationText: {
-    fontSize: 13,
-    color: "#8B9DBF",
-  },
-  greeting: {
-    fontFamily: FONT_ARABIC,
-    fontSize: 18,
-    color: GOLD,
-    textAlign: "center",
-    padding: "0 24px 20px",
-    position: "relative",
-    zIndex: 1,
-  },
-  dateRow: {
-    display: "flex",
-    gap: 12,
-    padding: "0 24px 20px",
-    position: "relative",
-    zIndex: 1,
-  },
-  dateCard: {
-    flex: 1,
-    background: "rgba(201,168,76,0.08)",
-    border: "1px solid rgba(201,168,76,0.2)",
-    borderRadius: 14,
-    padding: "14px 16px",
-    textAlign: "center",
-  },
-  dateCardLabel: {
-    fontSize: 10,
-    color: "#8B9DBF",
-    textTransform: "uppercase",
-    letterSpacing: "0.1em",
-    marginBottom: 6,
-  },
-  dateCardValue: {
-    fontSize: 13,
-    fontWeight: 600,
-    color: PARCHMENT,
-    marginBottom: 4,
-  },
-  dateCardArabic: {
-    fontFamily: FONT_ARABIC,
-    fontSize: 15,
-    color: GOLD,
-  },
-  errorCard: {
-    display: "flex",
-    alignItems: "center",
-    gap: 10,
-    background: "rgba(232,96,28,0.1)",
-    border: "1px solid rgba(232,96,28,0.3)",
-    borderRadius: 12,
-    padding: "12px 16px",
-    margin: "0 24px 20px",
-    fontSize: 13,
-    color: "#E8A07C",
-    position: "relative",
-    zIndex: 1,
-  },
-  loadingWrap: {
-    textAlign: "center",
-    padding: "40px 24px",
-    position: "relative",
-    zIndex: 1,
-  },
-  loadingText: {
-    color: "#8B9DBF",
-    fontSize: 14,
-    animation: "pulse 1.5s ease-in-out infinite",
-  },
-  countdownCard: {
-    margin: "0 24px 20px",
-    background: `linear-gradient(135deg, rgba(201,168,76,0.15), rgba(201,168,76,0.05))`,
-    border: "1px solid rgba(201,168,76,0.35)",
-    borderRadius: 20,
-    padding: "24px",
-    textAlign: "center",
-    position: "relative",
-    zIndex: 1,
-  },
-  countdownLabel: {
-    fontSize: 11,
-    color: "#8B9DBF",
-    textTransform: "uppercase",
-    letterSpacing: "0.12em",
-    marginBottom: 8,
-  },
-  countdownPrayer: {
-    fontFamily: FONT_ARABIC,
-    fontSize: 24,
-    color: PARCHMENT,
-    fontWeight: 700,
-    marginBottom: 12,
-  },
-  countdownArabic: {
-    color: GOLD,
-  },
-  countdownTimer: {
-    fontFamily: "monospace",
-    fontSize: 42,
-    fontWeight: 700,
-    color: GOLD,
-    letterSpacing: "0.05em",
-    lineHeight: 1,
-    marginBottom: 10,
-  },
-  countdownSub: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 5,
-    fontSize: 13,
-    color: "#8B9DBF",
-  },
-  prayerList: {
-    padding: "0 24px",
-    display: "flex",
-    flexDirection: "column",
-    gap: 8,
-    position: "relative",
-    zIndex: 1,
-  },
-  prayerRow: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    background: "rgba(15,32,64,0.8)",
-    border: "1px solid rgba(139,157,191,0.15)",
-    borderRadius: 14,
-    padding: "14px 16px",
-  },
-  prayerRowNext: {
-    background: "rgba(201,168,76,0.1)",
-    border: "1px solid rgba(201,168,76,0.4)",
-  },
-  prayerRowPassed: {
-    opacity: 0.5,
-  },
-  prayerLeft: {
-    display: "flex",
-    alignItems: "center",
-    gap: 12,
-  },
-  prayerEmoji: {
-    fontSize: 22,
-  },
-  prayerName: {
-    fontSize: 15,
-    fontWeight: 600,
-    color: PARCHMENT,
-  },
-  prayerArabic: {
-    fontFamily: FONT_ARABIC,
-    fontSize: 13,
-    color: GOLD,
-    marginTop: 1,
-  },
-  prayerRight: {
-    display: "flex",
-    alignItems: "center",
-    gap: 10,
-  },
-  prayerTime: {
-    fontFamily: "monospace",
-    fontSize: 15,
-    fontWeight: 600,
-    color: "#8B9DBF",
-  },
-  prayerTimeNext: {
-    color: GOLD,
-  },
-  nextBadge: {
-    fontSize: 10,
-    background: GOLD,
-    color: MIDNIGHT,
-    padding: "2px 7px",
-    borderRadius: 5,
-    fontWeight: 700,
-    textTransform: "uppercase",
-    letterSpacing: "0.05em",
-  },
-  passedBadge: {
-    fontSize: 14,
-    color: "#2D7A3A",
-  },
-  footer: {
-    textAlign: "center",
-    padding: "32px 24px 0",
-    position: "relative",
-    zIndex: 1,
-  },
-  footerText: {
-    fontFamily: FONT_ARABIC,
-    fontSize: 18,
-    color: GOLD,
-    marginBottom: 6,
-  },
-  footerSub: {
-    fontSize: 11,
-    color: "#8B9DBF",
-    fontStyle: "italic",
-  },
+  page: { minHeight: "100vh", background: MIDNIGHT, color: TEXT, fontFamily: FONT, maxWidth: 480, margin: "0 auto" },
+  header: { background: DEEP, padding: "20px 20px 14px", borderBottom: `1px solid ${CARD}` },
+  headerTop: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 },
+  appName: { fontFamily: FONT_ARABIC, fontSize: 26, color: GOLD, lineHeight: 1.2 },
+  appNameEn: { fontSize: 11, color: MUTED, letterSpacing: "0.15em", textTransform: "uppercase" },
+  locationPill: { display: "flex", alignItems: "center", gap: 5, background: CARD, borderRadius: 20, padding: "5px 10px" },
+  locationText: { fontSize: 11.5, color: MUTED },
+  dateRow: { display: "flex", alignItems: "center", gap: 8 },
+  dateHijri: { fontSize: 12.5, color: GOLD },
+  dateSep: { color: MUTED, fontSize: 10 },
+  dateGreg: { fontSize: 12.5, color: MUTED },
+  tabs: { display: "flex", background: DEEP, borderBottom: `1px solid ${CARD}` },
+  tab: { flex: 1, padding: "13px 8px", background: "none", color: MUTED, fontSize: 13.5, fontWeight: 600, borderBottom: "2px solid transparent" },
+  tabActive: { color: GOLD, borderBottom: `2px solid ${GOLD}` },
+  content: { padding: "16px 16px 60px" },
+  greeting: { textAlign: "center", fontSize: 15, color: GOLD_LIGHT, marginBottom: 14, fontStyle: "italic" },
+  errorCard: { display: "flex", alignItems: "center", gap: 10, background: "#2A1510", border: "1px solid #5A2A1A", borderRadius: 12, padding: "12px 16px", marginBottom: 14, color: "#E8A090", fontSize: 13.5 },
+  loadingWrap: { textAlign: "center", padding: "40px 20px" },
+  loadingDot: { width: 10, height: 10, borderRadius: "50%", background: GOLD, margin: "0 auto 12px", animation: "pulse 1.2s ease-in-out infinite" },
+  loadingText: { color: MUTED, fontSize: 13.5 },
+  countdownCard: { background: `linear-gradient(135deg, #1A3A5C, ${CARD})`, border: `1px solid ${GOLD}44`, borderRadius: 16, padding: "20px", textAlign: "center", marginBottom: 16 },
+  countdownLabel: { fontSize: 11, color: MUTED, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 },
+  countdownPrayer: { fontSize: 22, fontWeight: 700, color: TEXT, marginBottom: 8 },
+  countdownArabic: { fontFamily: FONT_ARABIC, color: GOLD, fontSize: 18 },
+  countdownTimer: { fontFamily: "monospace", fontSize: 36, color: GOLD_LIGHT, fontWeight: 700, letterSpacing: "0.05em", marginBottom: 6 },
+  countdownSub: { display: "flex", alignItems: "center", justifyContent: "center", gap: 5, fontSize: 12.5, color: MUTED },
+  prayerList: { display: "flex", flexDirection: "column", gap: 8 },
+  prayerRow: { display: "flex", justifyContent: "space-between", alignItems: "center", background: CARD, borderRadius: 12, padding: "12px 16px", border: "1px solid transparent" },
+  prayerRowNext: { border: `1px solid ${GOLD}88`, background: "#1A3A5C" },
+  prayerRowPassed: { opacity: 0.5 },
+  prayerLeft: { display: "flex", alignItems: "center", gap: 12 },
+  prayerEmoji: { fontSize: 20 },
+  prayerName: { fontSize: 15, fontWeight: 600, color: TEXT },
+  prayerArabic: { fontFamily: FONT_ARABIC, fontSize: 13, color: GOLD, marginTop: 1 },
+  prayerRight: { textAlign: "right" },
+  prayerTime: { fontSize: 15, fontWeight: 600, color: TEXT },
+  prayerTimeNext: { color: GOLD_LIGHT },
+  nextBadge: { fontSize: 10, background: GOLD, color: MIDNIGHT, padding: "2px 7px", borderRadius: 5, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", marginTop: 3 },
+  passedBadge: { fontSize: 14, color: GREEN, marginTop: 2 },
+  footer: { textAlign: "center", padding: "32px 0 0" },
+  footerText: { fontFamily: FONT_ARABIC, fontSize: 18, color: GOLD, marginBottom: 6 },
+  footerSub: { fontSize: 11, color: MUTED, fontStyle: "italic" },
+  azkarTitle: { fontFamily: FONT_ARABIC, fontSize: 22, color: GOLD, textAlign: "center", marginBottom: 4 },
+  azkarSubtitle: { fontSize: 13, color: MUTED, textAlign: "center", marginBottom: 18 },
+  categoryGrid: { display: "flex", flexDirection: "column", gap: 10 },
+  categoryCard: { background: CARD, border: `1px solid #1E3A5A`, borderRadius: 14, padding: "16px", textAlign: "left", color: TEXT, width: "100%" },
+  categoryEmoji: { fontSize: 24, marginBottom: 8 },
+  categoryTitle: { fontSize: 15, fontWeight: 700, color: TEXT, marginBottom: 3 },
+  categoryArabic: { fontFamily: FONT_ARABIC, fontSize: 14, color: GOLD, marginBottom: 5 },
+  categoryMeta: { fontSize: 11.5, color: MUTED },
+  backBtn: { display: "flex", alignItems: "center", gap: 5, background: "none", color: MUTED, fontSize: 13.5, padding: "0 0 14px", fontWeight: 600 },
+  catHeader: { textAlign: "center", marginBottom: 20, paddingBottom: 16, borderBottom: `1px solid ${CARD}` },
+  catEmoji: { fontSize: 32, marginBottom: 6 },
+  catTitle: { fontSize: 18, fontWeight: 700, color: TEXT, marginBottom: 4 },
+  catArabic: { fontFamily: FONT_ARABIC, fontSize: 16, color: GOLD, marginBottom: 4 },
+  catTime: { fontSize: 12, color: MUTED },
+  dhikrList: { display: "flex", flexDirection: "column", gap: 14 },
+  dhikrCard: { background: CARD, borderRadius: 14, padding: "16px", border: "1px solid #1E3A5A" },
+  dhikrCardDone: { border: `1px solid ${GREEN}66`, background: "#0D2818" },
+  dhikrArabic: { fontFamily: FONT_ARABIC, fontSize: 20, color: TEXT, lineHeight: 1.8, marginBottom: 10, direction: "rtl", textAlign: "right" },
+  dhikrTranslit: { fontSize: 12.5, color: GOLD, fontStyle: "italic", marginBottom: 8 },
+  dhikrTranslation: { fontSize: 13, color: MUTED, lineHeight: 1.6, marginBottom: 10 },
+  dhikrSource: { fontSize: 11.5, color: "#5A7A9A", marginBottom: 12, fontStyle: "italic" },
+  dhikrFooter: { display: "flex", justifyContent: "space-between", alignItems: "center" },
+  dhikrCount: { display: "flex", alignItems: "baseline", gap: 3 },
+  dhikrCurrent: { fontFamily: "monospace", fontSize: 28, fontWeight: 700, color: GOLD_LIGHT },
+  dhikrCurrentDone: { color: GREEN },
+  dhikrSlash: { color: MUTED, fontSize: 18 },
+  dhikrTarget: { fontFamily: "monospace", fontSize: 18, color: MUTED },
+  dhikrBtns: { display: "flex", gap: 8, alignItems: "center" },
+  resetBtn: { background: DEEP, color: MUTED, borderRadius: 8, padding: "7px 10px", display: "flex", alignItems: "center" },
+  tapBtn: { background: GOLD, color: MIDNIGHT, borderRadius: 10, padding: "9px 18px", fontWeight: 700, fontSize: 14 },
+  tapBtnDone: { background: GREEN, color: "#fff" },
 };

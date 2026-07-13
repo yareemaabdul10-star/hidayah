@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { MapPin, Clock, AlertCircle, ChevronLeft, RotateCcw } from "lucide-react";
+import { MapPin, Clock, AlertCircle, ChevronLeft, RotateCcw, BookOpen } from "lucide-react";
 
 // ---------- Prayer Constants ----------
 const PRAYERS = ["Fajr", "Sunrise", "Dhuhr", "Asr", "Maghrib", "Isha"];
@@ -500,6 +500,14 @@ export default function App() {
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [counts, setCounts] = useState({});
 
+  // Quran state
+  const [surahs, setSurahs] = useState([]);
+  const [selectedSurah, setSelectedSurah] = useState(null);
+  const [surahVerses, setSurahVerses] = useState([]);
+  const [quranLoading, setQuranLoading] = useState(false);
+  const [quranError, setQuranError] = useState("");
+  const [surahSearch, setSurahSearch] = useState("");
+
   useEffect(() => {
     const interval = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(interval);
@@ -562,6 +570,52 @@ export default function App() {
     );
   }, [fetchPrayerTimes]);
 
+  // Fetch surah list when Quran tab is opened
+  useEffect(() => {
+    if (activeTab !== "quran" || surahs.length > 0) return;
+    (async () => {
+      setQuranLoading(true);
+      setQuranError("");
+      try {
+        const res = await fetch("https://api.alquran.cloud/v1/surah");
+        const data = await res.json();
+        if (data.code === 200) setSurahs(data.data);
+        else setQuranError("Couldn't load surah list. Try again.");
+      } catch {
+        setQuranError("Network error. Check your connection.");
+      }
+      setQuranLoading(false);
+    })();
+  }, [activeTab, surahs.length]);
+
+  async function loadSurah(surah) {
+    setSelectedSurah(surah);
+    setSurahVerses([]);
+    setQuranLoading(true);
+    setQuranError("");
+    try {
+      const [arabicRes, engRes] = await Promise.all([
+        fetch(`https://api.alquran.cloud/v1/surah/${surah.number}`),
+        fetch(`https://api.alquran.cloud/v1/surah/${surah.number}/en.sahih`),
+      ]);
+      const arabicData = await arabicRes.json();
+      const engData = await engRes.json();
+      if (arabicData.code === 200 && engData.code === 200) {
+        const merged = arabicData.data.ayahs.map((ayah, i) => ({
+          number: ayah.numberInSurah,
+          arabic: ayah.text,
+          translation: engData.data.ayahs[i]?.text || "",
+        }));
+        setSurahVerses(merged);
+      } else {
+        setQuranError("Couldn't load surah. Try again.");
+      }
+    } catch {
+      setQuranError("Network error. Check your connection.");
+    }
+    setQuranLoading(false);
+  }
+
   function tap(index) {
     const cat = selectedCategory;
     const target = cat.items[index].count;
@@ -610,13 +664,19 @@ export default function App() {
           style={{ ...styles.tab, ...(activeTab === "prayer" ? styles.tabActive : {}) }}
           onClick={() => setActiveTab("prayer")}
         >
-          🕌 Prayer Times
+          🕌 Prayer
         </button>
         <button
           style={{ ...styles.tab, ...(activeTab === "azkar" ? styles.tabActive : {}) }}
           onClick={() => { setActiveTab("azkar"); setSelectedCategory(null); }}
         >
           📿 Azkar
+        </button>
+        <button
+          style={{ ...styles.tab, ...(activeTab === "quran" ? styles.tabActive : {}) }}
+          onClick={() => { setActiveTab("quran"); setSelectedSurah(null); setSurahSearch(""); }}
+        >
+          📖 Quran
         </button>
       </div>
 
@@ -766,6 +826,114 @@ export default function App() {
           </div>
         </div>
       )}
+      {/* ===== QURAN TAB — Surah List ===== */}
+      {activeTab === "quran" && !selectedSurah && (
+        <div style={styles.content}>
+          <div style={styles.azkarTitle}>القرآن الكريم</div>
+          <div style={styles.azkarSubtitle}>The Noble Quran — 114 Surahs</div>
+
+          {/* Search */}
+          <div style={styles.quranSearchBar}>
+            <BookOpen size={15} color="#C9A84C" />
+            <input
+              style={styles.quranSearchInput}
+              placeholder="Search surah name..."
+              value={surahSearch}
+              onChange={(e) => setSurahSearch(e.target.value)}
+            />
+          </div>
+
+          {quranError && (
+            <div style={styles.errorCard}>
+              <AlertCircle size={18} color="#E8601C" />
+              <span>{quranError}</span>
+            </div>
+          )}
+
+          {quranLoading && (
+            <div style={styles.loadingWrap}>
+              <div style={styles.loadingDot} />
+              <div style={styles.loadingText}>Loading surahs…</div>
+            </div>
+          )}
+
+          {!quranLoading && (
+            <div style={styles.surahList}>
+              {surahs
+                .filter((s) =>
+                  s.englishName.toLowerCase().includes(surahSearch.toLowerCase()) ||
+                  s.name.includes(surahSearch)
+                )
+                .map((surah) => (
+                  <button
+                    key={surah.number}
+                    style={styles.surahRow}
+                    onClick={() => loadSurah(surah)}
+                  >
+                    <div style={styles.surahNumber}>{surah.number}</div>
+                    <div style={styles.surahInfo}>
+                      <div style={styles.surahName}>{surah.englishName}</div>
+                      <div style={styles.surahMeta}>
+                        {surah.englishNameTranslation} · {surah.numberOfAyahs} verses · {surah.revelationType}
+                      </div>
+                    </div>
+                    <div style={styles.surahArabic}>{surah.name}</div>
+                  </button>
+                ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ===== QURAN TAB — Surah Reader ===== */}
+      {activeTab === "quran" && selectedSurah && (
+        <div style={styles.content}>
+          <button style={styles.backBtn} onClick={() => { setSelectedSurah(null); setSurahVerses([]); }}>
+            <ChevronLeft size={16} /> All Surahs
+          </button>
+
+          <div style={styles.catHeader}>
+            <div style={styles.surahReaderArabic}>{selectedSurah.name}</div>
+            <div style={styles.catTitle}>{selectedSurah.englishName}</div>
+            <div style={styles.catTime}>
+              {selectedSurah.englishNameTranslation} · {selectedSurah.numberOfAyahs} verses · {selectedSurah.revelationType}
+            </div>
+          </div>
+
+          {quranError && (
+            <div style={styles.errorCard}>
+              <AlertCircle size={18} color="#E8601C" />
+              <span>{quranError}</span>
+            </div>
+          )}
+
+          {quranLoading && (
+            <div style={styles.loadingWrap}>
+              <div style={styles.loadingDot} />
+              <div style={styles.loadingText}>Loading {selectedSurah.englishName}…</div>
+            </div>
+          )}
+
+          {!quranLoading && (
+            <div style={styles.verseList}>
+              {/* Bismillah for all surahs except Tawbah (9) and Al-Fatihah (1, it's part of it) */}
+              {selectedSurah.number !== 9 && selectedSurah.number !== 1 && (
+                <div style={styles.bismillah}>
+                  بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
+                </div>
+              )}
+              {surahVerses.map((verse) => (
+                <div key={verse.number} style={styles.verseCard}>
+                  <div style={styles.verseNumberBadge}>{verse.number}</div>
+                  <div style={styles.verseArabic}>{verse.arabic}</div>
+                  <div style={styles.verseTranslation}>{verse.translation}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
     </div>
   );
 }
@@ -867,4 +1035,22 @@ const styles = {
   resetBtn: { background: DEEP, color: MUTED, borderRadius: 8, padding: "7px 10px", display: "flex", alignItems: "center" },
   tapBtn: { background: GOLD, color: MIDNIGHT, borderRadius: 10, padding: "9px 18px", fontWeight: 700, fontSize: 14 },
   tapBtnDone: { background: GREEN, color: "#fff" },
+
+  // Quran styles
+  quranSearchBar: { display: "flex", alignItems: "center", gap: 10, background: CARD, border: `1px solid #1E3A5A`, borderRadius: 10, padding: "10px 14px", marginBottom: 14 },
+  quranSearchInput: { flex: 1, background: "none", border: "none", outline: "none", color: TEXT, fontSize: 14, fontFamily: FONT },
+  surahList: { display: "flex", flexDirection: "column", gap: 6 },
+  surahRow: { display: "flex", alignItems: "center", gap: 12, background: CARD, border: `1px solid #1E3A5A`, borderRadius: 12, padding: "12px 14px", width: "100%", textAlign: "left", color: TEXT },
+  surahNumber: { width: 32, height: 32, borderRadius: "50%", background: DEEP, border: `1px solid ${GOLD}44`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, color: GOLD, flexShrink: 0 },
+  surahInfo: { flex: 1, minWidth: 0 },
+  surahName: { fontSize: 14.5, fontWeight: 600, color: TEXT },
+  surahMeta: { fontSize: 11.5, color: MUTED, marginTop: 2 },
+  surahArabic: { fontFamily: FONT_ARABIC, fontSize: 18, color: GOLD, flexShrink: 0 },
+  surahReaderArabic: { fontFamily: FONT_ARABIC, fontSize: 32, color: GOLD, marginBottom: 6 },
+  bismillah: { fontFamily: FONT_ARABIC, fontSize: 22, color: GOLD, textAlign: "center", padding: "16px 0", borderBottom: `1px solid ${CARD}`, marginBottom: 14 },
+  verseList: { display: "flex", flexDirection: "column", gap: 12 },
+  verseCard: { background: CARD, borderRadius: 12, padding: "14px", border: `1px solid #1E3A5A` },
+  verseNumberBadge: { width: 28, height: 28, borderRadius: "50%", background: DEEP, border: `1px solid ${GOLD}44`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: GOLD, marginBottom: 10 },
+  verseArabic: { fontFamily: FONT_ARABIC, fontSize: 20, color: TEXT, lineHeight: 2, direction: "rtl", textAlign: "right", marginBottom: 10 },
+  verseTranslation: { fontSize: 13, color: MUTED, lineHeight: 1.7, borderTop: `1px solid #1E3A5A`, paddingTop: 10 },
 };

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { MapPin, Clock, AlertCircle, ChevronLeft, RotateCcw, BookOpen } from "lucide-react";
+import { MapPin, Clock, AlertCircle, ChevronLeft, RotateCcw, BookOpen, Calendar } from "lucide-react";
 
 // ---------- Prayer Constants ----------
 const PRAYERS = ["Fajr", "Sunrise", "Dhuhr", "Asr", "Maghrib", "Isha"];
@@ -484,6 +484,27 @@ function getGreeting(timings) {
   return "Laylah mubārakah 🌙";
 }
 
+// ---------- Islamic Events ----------
+const ISLAMIC_EVENTS = [
+  { month: 1, day: 1, name: "Islamic New Year", arabic: "رأس السنة الهجرية", emoji: "🌙", desc: "The first day of Muharram marks the beginning of the Islamic lunar year." },
+  { month: 1, day: 10, name: "Day of Ashura", arabic: "يوم عاشوراء", emoji: "✨", desc: "A day of great significance. Fasting on this day expiates sins of the previous year. (Muslim 1162)" },
+  { month: 3, day: 12, name: "Mawlid an-Nabi ﷺ", arabic: "المولد النبوي", emoji: "🌹", desc: "The birth of the Prophet Muhammad ﷺ in Makkah (12 Rabi al-Awwal, 570 CE)." },
+  { month: 7, day: 27, name: "Isra wal Mi'raj", arabic: "الإسراء والمعراج", emoji: "🌃", desc: "The Night Journey of the Prophet ﷺ from Makkah to Jerusalem and his ascent to the heavens." },
+  { month: 8, day: 15, name: "Laylatul Bara'ah", arabic: "ليلة البراءة", emoji: "⭐", desc: "The Night of Forgiveness — 15th of Sha'ban. A night recommended for worship and seeking forgiveness." },
+  { month: 9, day: 1, name: "Ramadan Begins", arabic: "بداية شهر رمضان", emoji: "🌙", desc: "The blessed month of fasting begins. The month in which the Quran was revealed." },
+  { month: 9, day: 27, name: "Laylatul Qadr", arabic: "ليلة القدر", emoji: "✨", desc: "The Night of Power — better than a thousand months (Quran 97:3). Seek it in the last 10 nights of Ramadan." },
+  { month: 10, day: 1, name: "Eid ul-Fitr", arabic: "عيد الفطر", emoji: "🎉", desc: "The Festival of Breaking the Fast — celebrated on the first day of Shawwal after Ramadan." },
+  { month: 12, day: 8, name: "Day of Arafah", arabic: "يوم عرفة", emoji: "🤲", desc: "The greatest day of Hajj. Fasting on this day expiates sins of two years. (Muslim 1162)" },
+  { month: 12, day: 10, name: "Eid ul-Adha", arabic: "عيد الأضحى", emoji: "🐑", desc: "The Festival of Sacrifice — commemorating the willingness of Ibrahim ﷺ to sacrifice his son." },
+  { month: 12, day: 11, name: "Days of Tashreeq Begin", arabic: "أيام التشريق", emoji: "📅", desc: "11th, 12th, and 13th of Dhul Hijjah — days of eating, drinking and remembering Allah." },
+];
+
+const HIJRI_MONTHS = [
+  "Muharram", "Safar", "Rabi al-Awwal", "Rabi al-Thani",
+  "Jumada al-Ula", "Jumada al-Thani", "Rajab", "Sha'ban",
+  "Ramadan", "Shawwal", "Dhul Qa'dah", "Dhul Hijjah",
+];
+
 // ---------- Main App ----------
 export default function App() {
   const [location, setLocation] = useState(null);
@@ -505,8 +526,13 @@ export default function App() {
   const [selectedSurah, setSelectedSurah] = useState(null);
   const [surahVerses, setSurahVerses] = useState([]);
   const [quranLoading, setQuranLoading] = useState(false);
-  const [quranError, setQuranError] = useState("");
+  const [quranError, setQuranError] = useState("")
   const [surahSearch, setSurahSearch] = useState("");
+
+  // Calendar state
+  const [calendarData, setCalendarData] = useState(null);
+  const [calendarLoading, setCalendarLoading] = useState(false);
+  const [calendarError, setCalendarError] = useState("");
 
   useEffect(() => {
     const interval = setInterval(() => setNow(new Date()), 1000);
@@ -587,6 +613,27 @@ export default function App() {
       setQuranLoading(false);
     })();
   }, [activeTab, surahs.length]);
+
+  // Fetch calendar when tab opens
+  useEffect(() => {
+    if (activeTab !== "calendar" || calendarData) return;
+    (async () => {
+      setCalendarLoading(true);
+      setCalendarError("");
+      try {
+        const now = new Date();
+        const res = await fetch(
+          `https://api.aladhan.com/v1/gToH/${now.getDate()}-${now.getMonth() + 1}-${now.getFullYear()}`
+        );
+        const data = await res.json();
+        if (data.code === 200) setCalendarData(data.data);
+        else setCalendarError("Couldn't load calendar data.");
+      } catch {
+        setCalendarError("Network error. Check your connection.");
+      }
+      setCalendarLoading(false);
+    })();
+  }, [activeTab, calendarData]);
 
   async function loadSurah(surah) {
     setSelectedSurah(surah);
@@ -677,6 +724,12 @@ export default function App() {
           onClick={() => { setActiveTab("quran"); setSelectedSurah(null); setSurahSearch(""); }}
         >
           📖 Quran
+        </button>
+        <button
+          style={{ ...styles.tab, ...(activeTab === "calendar" ? styles.tabActive : {}) }}
+          onClick={() => setActiveTab("calendar")}
+        >
+          📅 Calendar
         </button>
       </div>
 
@@ -826,6 +879,115 @@ export default function App() {
           </div>
         </div>
       )}
+      {/* ===== CALENDAR TAB ===== */}
+      {activeTab === "calendar" && (
+        <div style={styles.content}>
+          <div style={styles.azkarTitle}>التقويم الهجري</div>
+          <div style={styles.azkarSubtitle}>Islamic Hijri Calendar</div>
+
+          {calendarError && (
+            <div style={styles.errorCard}>
+              <AlertCircle size={18} color="#E8601C" />
+              <span>{calendarError}</span>
+            </div>
+          )}
+
+          {calendarLoading && (
+            <div style={styles.loadingWrap}>
+              <div style={styles.loadingDot} />
+              <div style={styles.loadingText}>Loading calendar…</div>
+            </div>
+          )}
+
+          {!calendarLoading && calendarData && (
+            <>
+              {/* Today's date card */}
+              <div style={styles.calTodayCard}>
+                <div style={styles.calTodayLabel}>Today</div>
+                <div style={styles.calHijriDate}>
+                  {calendarData.hijri.day} {calendarData.hijri.month.en} {calendarData.hijri.year}
+                </div>
+                <div style={styles.calHijriArabic}>
+                  {calendarData.hijri.day} {calendarData.hijri.month.ar} {calendarData.hijri.year} هـ
+                </div>
+                <div style={styles.calGreg}>
+                  {calendarData.gregorian.weekday.en}, {calendarData.gregorian.day} {calendarData.gregorian.month.en} {calendarData.gregorian.year}
+                </div>
+                {calendarData.hijri.holidays && calendarData.hijri.holidays.length > 0 && (
+                  <div style={styles.calHolidayBadge}>
+                    ✨ {calendarData.hijri.holidays[0]}
+                  </div>
+                )}
+              </div>
+
+              {/* Current Hijri month info */}
+              <div style={styles.calMonthCard}>
+                <div style={styles.calMonthTitle}>
+                  <Calendar size={16} color={GOLD} />
+                  Current Month: {calendarData.hijri.month.en}
+                </div>
+                <div style={styles.calMonthArabic}>{calendarData.hijri.month.ar}</div>
+                <div style={styles.calMonthNum}>Month {calendarData.hijri.month.number} of 12</div>
+              </div>
+
+              {/* Upcoming Islamic Events */}
+              <div style={styles.calSectionTitle}>📅 Islamic Events This Year</div>
+              <div style={styles.eventList}>
+                {ISLAMIC_EVENTS.map((event, idx) => {
+                  const currentMonth = parseInt(calendarData.hijri.month.number);
+                  const currentDay = parseInt(calendarData.hijri.day);
+                  const isPast = event.month < currentMonth ||
+                    (event.month === currentMonth && event.day < currentDay);
+                  const isToday = event.month === currentMonth && event.day === currentDay;
+
+                  return (
+                    <div
+                      key={idx}
+                      style={{
+                        ...styles.eventCard,
+                        ...(isToday ? styles.eventCardToday : {}),
+                        ...(isPast ? styles.eventCardPast : {}),
+                      }}
+                    >
+                      <div style={styles.eventHeader}>
+                        <span style={styles.eventEmoji}>{event.emoji}</span>
+                        <div style={styles.eventInfo}>
+                          <div style={styles.eventName}>{event.name}</div>
+                          <div style={styles.eventArabic}>{event.arabic}</div>
+                        </div>
+                        <div style={styles.eventDate}>
+                          <div style={styles.eventDateNum}>{event.day}</div>
+                          <div style={styles.eventDateMonth}>{HIJRI_MONTHS[event.month - 1].split(" ")[0]}</div>
+                        </div>
+                      </div>
+                      <div style={styles.eventDesc}>{event.desc}</div>
+                      {isToday && <div style={styles.todayBadge}>Today!</div>}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Hijri months reference */}
+              <div style={styles.calSectionTitle}>📖 Hijri Months</div>
+              <div style={styles.monthsGrid}>
+                {HIJRI_MONTHS.map((month, idx) => (
+                  <div
+                    key={idx}
+                    style={{
+                      ...styles.monthChip,
+                      ...(idx + 1 === parseInt(calendarData.hijri.month.number) ? styles.monthChipActive : {}),
+                    }}
+                  >
+                    <span style={styles.monthNum}>{idx + 1}</span>
+                    <span style={styles.monthName}>{month}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
       {/* ===== QURAN TAB — Surah List ===== */}
       {activeTab === "quran" && !selectedSurah && (
         <div style={styles.content}>
@@ -1053,4 +1215,36 @@ const styles = {
   verseNumberBadge: { width: 28, height: 28, borderRadius: "50%", background: DEEP, border: `1px solid ${GOLD}44`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: GOLD, marginBottom: 10 },
   verseArabic: { fontFamily: FONT_ARABIC, fontSize: 20, color: TEXT, lineHeight: 2, direction: "rtl", textAlign: "right", marginBottom: 10 },
   verseTranslation: { fontSize: 13, color: MUTED, lineHeight: 1.7, borderTop: `1px solid #1E3A5A`, paddingTop: 10 },
+
+  // Calendar styles
+  calTodayCard: { background: `linear-gradient(135deg, #1A3A5C, ${CARD})`, border: `1px solid ${GOLD}66`, borderRadius: 16, padding: "20px", textAlign: "center", marginBottom: 14 },
+  calTodayLabel: { fontSize: 11, color: MUTED, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 },
+  calHijriDate: { fontSize: 24, fontWeight: 700, color: GOLD_LIGHT, marginBottom: 4 },
+  calHijriArabic: { fontFamily: FONT_ARABIC, fontSize: 18, color: GOLD, marginBottom: 8 },
+  calGreg: { fontSize: 13, color: MUTED },
+  calHolidayBadge: { marginTop: 10, background: `${GOLD}22`, border: `1px solid ${GOLD}44`, borderRadius: 8, padding: "6px 12px", fontSize: 13, color: GOLD_LIGHT, display: "inline-block" },
+  calMonthCard: { background: CARD, border: `1px solid #1E3A5A`, borderRadius: 12, padding: "14px 16px", marginBottom: 20 },
+  calMonthTitle: { display: "flex", alignItems: "center", gap: 8, fontSize: 14, fontWeight: 600, color: TEXT, marginBottom: 4 },
+  calMonthArabic: { fontFamily: FONT_ARABIC, fontSize: 16, color: GOLD, marginBottom: 2 },
+  calMonthNum: { fontSize: 12, color: MUTED },
+  calSectionTitle: { fontSize: 14, fontWeight: 700, color: TEXT, marginBottom: 12, marginTop: 4 },
+  eventList: { display: "flex", flexDirection: "column", gap: 10, marginBottom: 24 },
+  eventCard: { background: CARD, border: `1px solid #1E3A5A`, borderRadius: 14, padding: "14px" },
+  eventCardToday: { border: `1px solid ${GOLD}88`, background: "#1A3A5C" },
+  eventCardPast: { opacity: 0.45 },
+  eventHeader: { display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 8 },
+  eventEmoji: { fontSize: 22, flexShrink: 0 },
+  eventInfo: { flex: 1, minWidth: 0 },
+  eventName: { fontSize: 14.5, fontWeight: 600, color: TEXT, marginBottom: 2 },
+  eventArabic: { fontFamily: FONT_ARABIC, fontSize: 13, color: GOLD },
+  eventDate: { textAlign: "center", flexShrink: 0 },
+  eventDateNum: { fontSize: 18, fontWeight: 700, color: GOLD_LIGHT, lineHeight: 1 },
+  eventDateMonth: { fontSize: 10, color: MUTED, marginTop: 2 },
+  eventDesc: { fontSize: 12.5, color: MUTED, lineHeight: 1.6 },
+  todayBadge: { marginTop: 8, fontSize: 11, fontWeight: 700, color: GOLD, background: `${GOLD}22`, borderRadius: 6, padding: "3px 8px", display: "inline-block" },
+  monthsGrid: { display: "flex", flexDirection: "column", gap: 6, marginBottom: 20 },
+  monthChip: { display: "flex", alignItems: "center", gap: 10, background: CARD, border: `1px solid #1E3A5A`, borderRadius: 10, padding: "10px 14px" },
+  monthChipActive: { border: `1px solid ${GOLD}66`, background: "#1A3A5C" },
+  monthNum: { fontFamily: "monospace", fontSize: 12, color: GOLD, width: 20, textAlign: "center" },
+  monthName: { fontSize: 13.5, color: TEXT, fontWeight: 500 },
 };

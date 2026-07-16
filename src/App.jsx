@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { MapPin, Clock, AlertCircle, ChevronLeft, RotateCcw, BookOpen, Calendar } from "lucide-react";
+import { MapPin, Clock, AlertCircle, ChevronLeft, RotateCcw, BookOpen, Calendar, MessageCircle, Send } from "lucide-react";
 
 // ---------- Prayer Constants ----------
 const PRAYERS = ["Fajr", "Sunrise", "Dhuhr", "Asr", "Maghrib", "Isha"];
@@ -534,6 +534,16 @@ export default function App() {
   const [calendarLoading, setCalendarLoading] = useState(false);
   const [calendarError, setCalendarError] = useState("");
 
+  // AI Companion state
+  const [messages, setMessages] = useState([
+    {
+      role: "assistant",
+      content: "As-salāmu ʿalaykum wa raḥmatullāhi wa barakātuh 🌙\n\nI am your Hidayah AI companion. You may ask me questions about Islam — the Quran, Sunnah, fiqh, history, or daily life. I will do my best to provide answers with proper references from the Quran and authentic hadith.\n\nPlease note: For important personal rulings, always consult a qualified scholar. I am a learning tool, not a mufti."
+    }
+  ]);
+  const [aiInput, setAiInput] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
+
   useEffect(() => {
     const interval = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(interval);
@@ -663,6 +673,53 @@ export default function App() {
     setQuranLoading(false);
   }
 
+  async function sendMessage() {
+    if (!aiInput.trim() || aiLoading) return;
+    const userMessage = { role: "user", content: aiInput.trim() };
+    const newMessages = [...messages, userMessage];
+    setMessages(newMessages);
+    setAiInput("");
+    setAiLoading(true);
+
+    try {
+      const response = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": import.meta.env.VITE_ANTHROPIC_KEY,
+          "anthropic-version": "2023-06-01",
+          "anthropic-dangerous-direct-browser-access": "true",
+        },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-6",
+          max_tokens: 1024,
+          system: `You are a knowledgeable Islamic companion app called Hidayah AI. Your role is to help Muslims learn about Islam with authentic, sourced answers.
+
+IMPORTANT RULES:
+1. Always cite your sources — reference specific Quran verses (Surah name, chapter:verse) or hadith (book name, hadith number, narrator)
+2. Start responses with an appropriate Islamic greeting or acknowledgment
+3. Be respectful, warm, and scholarly in tone
+4. If you are uncertain or the question involves complex personal rulings (fatwa), clearly say: "For this matter, I recommend consulting a qualified Islamic scholar (mufti)"
+5. Never fabricate hadith or Quran references — if you don't have a clear source, say so honestly
+6. Keep answers clear and accessible — avoid overly technical jargon unless necessary
+7. For matters with scholarly differences (ikhtilaf), briefly mention the different positions
+8. End important answers with a reminder that this is for learning and not a substitute for qualified scholarly guidance`,
+          messages: newMessages.map((m) => ({ role: m.role, content: m.content })),
+        }),
+      });
+
+      const data = await response.json();
+      if (data.content && data.content[0]) {
+        setMessages((prev) => [...prev, { role: "assistant", content: data.content[0].text }]);
+      } else {
+        setMessages((prev) => [...prev, { role: "assistant", content: "I'm sorry, I couldn't process that. Please try again." }]);
+      }
+    } catch (e) {
+      setMessages((prev) => [...prev, { role: "assistant", content: "Network error. Please check your connection and try again." }]);
+    }
+    setAiLoading(false);
+  }
+
   function tap(index) {
     const cat = selectedCategory;
     const target = cat.items[index].count;
@@ -730,6 +787,12 @@ export default function App() {
           onClick={() => setActiveTab("calendar")}
         >
           📅 Calendar
+        </button>
+        <button
+          style={{ ...styles.tab, ...(activeTab === "ai" ? styles.tabActive : {}) }}
+          onClick={() => setActiveTab("ai")}
+        >
+          🤖 AI
         </button>
       </div>
 
@@ -879,6 +942,73 @@ export default function App() {
           </div>
         </div>
       )}
+      {/* ===== AI COMPANION TAB ===== */}
+      {activeTab === "ai" && (
+        <div style={styles.aiPage}>
+          <div style={styles.aiHeader}>
+            <div style={styles.aiTitle}>🤖 Hidayah AI</div>
+            <div style={styles.aiSubtitle}>Ask anything about Islam — sourced answers from Quran & Sunnah</div>
+            <div style={styles.aiDisclaimer}>⚠️ For important rulings, consult a qualified scholar</div>
+          </div>
+
+          {/* Messages */}
+          <div style={styles.aiMessages}>
+            {messages.map((msg, idx) => (
+              <div
+                key={idx}
+                style={{
+                  ...styles.aiMessage,
+                  ...(msg.role === "user" ? styles.aiMessageUser : styles.aiMessageAssistant),
+                }}
+              >
+                {msg.role === "assistant" && (
+                  <div style={styles.aiAvatar}>🌙</div>
+                )}
+                <div
+                  style={{
+                    ...styles.aiMessageBubble,
+                    ...(msg.role === "user" ? styles.aiMessageBubbleUser : styles.aiMessageBubbleAssistant),
+                  }}
+                >
+                  {msg.content.split("\n").map((line, i) => (
+                    <span key={i}>{line}{i < msg.content.split("\n").length - 1 && <br />}</span>
+                  ))}
+                </div>
+              </div>
+            ))}
+            {aiLoading && (
+              <div style={styles.aiMessage}>
+                <div style={styles.aiAvatar}>🌙</div>
+                <div style={styles.aiTyping}>
+                  <span style={styles.aiDot} />
+                  <span style={styles.aiDot} />
+                  <span style={styles.aiDot} />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Input */}
+          <div style={styles.aiInputRow}>
+            <input
+              style={styles.aiInput}
+              placeholder="Ask about Islam..."
+              value={aiInput}
+              onChange={(e) => setAiInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+              disabled={aiLoading}
+            />
+            <button
+              style={{ ...styles.aiSendBtn, ...(aiLoading ? styles.aiSendBtnDisabled : {}) }}
+              onClick={sendMessage}
+              disabled={aiLoading}
+            >
+              <Send size={18} />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ===== CALENDAR TAB ===== */}
       {activeTab === "calendar" && (
         <div style={styles.content}>
@@ -1247,4 +1377,25 @@ const styles = {
   monthChipActive: { border: `1px solid ${GOLD}66`, background: "#1A3A5C" },
   monthNum: { fontFamily: "monospace", fontSize: 12, color: GOLD, width: 20, textAlign: "center" },
   monthName: { fontSize: 13.5, color: TEXT, fontWeight: 500 },
+
+  // AI Companion styles
+  aiPage: { display: "flex", flexDirection: "column", height: "calc(100vh - 120px)" },
+  aiHeader: { padding: "16px 16px 12px", borderBottom: `1px solid ${CARD}` },
+  aiTitle: { fontSize: 17, fontWeight: 700, color: TEXT, marginBottom: 4 },
+  aiSubtitle: { fontSize: 12.5, color: MUTED, marginBottom: 6 },
+  aiDisclaimer: { fontSize: 11.5, color: "#8B6A2A", background: "#2A1F0A", borderRadius: 8, padding: "5px 10px", display: "inline-block" },
+  aiMessages: { flex: 1, overflowY: "auto", padding: "14px 16px", display: "flex", flexDirection: "column", gap: 14 },
+  aiMessage: { display: "flex", alignItems: "flex-start", gap: 8 },
+  aiMessageUser: { flexDirection: "row-reverse" },
+  aiMessageAssistant: { flexDirection: "row" },
+  aiAvatar: { fontSize: 20, flexShrink: 0, marginTop: 2 },
+  aiMessageBubble: { maxWidth: "80%", borderRadius: 14, padding: "10px 14px", fontSize: 13.5, lineHeight: 1.6 },
+  aiMessageBubbleUser: { background: GOLD, color: MIDNIGHT, borderBottomRightRadius: 4 },
+  aiMessageBubbleAssistant: { background: CARD, color: TEXT, borderBottomLeftRadius: 4 },
+  aiTyping: { display: "flex", alignItems: "center", gap: 5, background: CARD, borderRadius: 14, padding: "12px 16px" },
+  aiDot: { width: 7, height: 7, borderRadius: "50%", background: GOLD, display: "inline-block", animation: "pulse 1.2s ease-in-out infinite" },
+  aiInputRow: { display: "flex", gap: 8, padding: "12px 16px", borderTop: `1px solid ${CARD}`, background: MIDNIGHT },
+  aiInput: { flex: 1, background: CARD, border: `1px solid #1E3A5A`, borderRadius: 10, padding: "11px 14px", color: TEXT, fontSize: 14, fontFamily: FONT, outline: "none" },
+  aiSendBtn: { background: GOLD, color: MIDNIGHT, border: "none", borderRadius: 10, padding: "11px 14px", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" },
+  aiSendBtnDisabled: { opacity: 0.5, cursor: "not-allowed" },
 };
